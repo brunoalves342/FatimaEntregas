@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Fatima Entregas</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+  :root {
+    --accent:#60a5fa;--accent2:#818cf8;--green:#34d399;--red:#f87171;--yellow:#fbbf24;
+    --text:#f0f4ff;--text2:#94a3b8;
+    --glass:rgba(255,255,255,0.05);--glass-border:rgba(255,255,255,0.10);--glass-hover:rgba(255,255,255,0.08);
+    --input-bg:rgba(0,0,0,0.25);--radius:20px;--radius-sm:14px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:#060a18;color:var(--text);overflow:hidden;}
+  .bg{position:fixed;inset:0;z-index:0;background:
+    radial-gradient(ellipse 80% 60% at 20% 10%,rgba(56,100,220,0.35) 0%,transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 80%,rgba(99,60,220,0.25) 0%,transparent 55%),
+    radial-gradient(ellipse 50% 40% at 60% 30%,rgba(30,140,255,0.15) 0%,transparent 50%),#060a18;}
+  .orb{position:fixed;border-radius:50%;filter:blur(60px);pointer-events:none;z-index:0;}
+  .orb1{width:260px;height:260px;background:rgba(56,100,220,0.28);top:-60px;left:-60px;}
+  .orb2{width:200px;height:200px;background:rgba(120,60,240,0.2);bottom:80px;right:-40px;}
+
+  .page{position:fixed;inset:0;z-index:1;display:none;flex-direction:column;
+    max-width:430px;margin:0 auto;
+    padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);}
+  .page.active{display:flex;}
+
+  /* LOGIN */
+  .login-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
+  .login-logo{width:72px;height:72px;background:linear-gradient(135deg,#3b6ef0,#818cf8);
+    border-radius:22px;display:flex;align-items:center;justify-content:center;
+    font-size:36px;box-shadow:0 8px 32px rgba(59,110,240,0.5);margin-bottom:20px;}
+  .login-title{font-size:24px;font-weight:900;letter-spacing:-0.6px;margin-bottom:4px;}
+  .login-sub{font-size:13px;font-weight:500;color:var(--text2);margin-bottom:32px;}
+  .login-card{width:100%;background:var(--glass);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+    border:1px solid var(--glass-border);border-radius:var(--radius);padding:20px;
+    display:flex;flex-direction:column;gap:14px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.07);}
+  .login-label{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:5px;}
+  .login-input{background:var(--input-bg);border:1.5px solid var(--glass-border);border-radius:var(--radius-sm);
+    padding:13px 15px;color:var(--text);font-size:16px;font-weight:500;font-family:'Inter',sans-serif;
+    outline:none;width:100%;-webkit-appearance:none;transition:border-color 0.15s;}
+  .login-input:focus{border-color:rgba(96,165,250,0.55);}
+  .login-input::placeholder{color:rgba(148,163,184,0.3);}
+  .btn-login{background:linear-gradient(135deg,#3b6ef0,#818cf8);color:#fff;border:none;
+    border-radius:var(--radius-sm);padding:15px;font-size:16px;font-weight:800;
+    font-family:'Inter',sans-serif;cursor:pointer;
+    box-shadow:0 4px 18px rgba(59,110,240,0.45);transition:opacity 0.15s,transform 0.1s;}
+  .btn-login:active{opacity:0.85;transform:scale(0.99);}
+  .login-err{font-size:12px;font-weight:600;color:var(--red);text-align:center;min-height:16px;}
+
+  /* STATUS SYNC */
+  .sync-bar{flex-shrink:0;padding:5px 18px;display:flex;align-items:center;gap:6px;
+    font-size:11px;font-weight:600;}
+  .sync-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  .sync-dot.online{background:var(--green);box-shadow:0 0 6px var(--green);}
+  .sync-dot.offline{background:var(--yellow);box-shadow:0 0 6px var(--yellow);}
+  .sync-dot.syncing{background:var(--accent);animation:pulse 1s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+
+  /* HEADER */
+  .header{flex-shrink:0;padding:14px 18px 12px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    background:rgba(6,10,24,0.5);border-bottom:1px solid var(--glass-border);}
+  .header-row{display:flex;align-items:center;justify-content:space-between;}
+  .logo{display:flex;align-items:center;gap:10px;}
+  .logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#3b6ef0,#818cf8);
+    border-radius:10px;display:flex;align-items:center;justify-content:center;
+    font-size:17px;box-shadow:0 4px 14px rgba(59,110,240,0.4);}
+  .logo-text h1{font-size:15px;font-weight:800;letter-spacing:-0.4px;line-height:1.1;}
+  .logo-text span{font-size:11px;font-weight:500;color:var(--text2);}
+  .header-right{display:flex;gap:7px;align-items:center;}
+  .btn-sair{background:rgba(248,113,113,0.12);color:var(--red);
+    border:1px solid rgba(248,113,113,0.25);border-radius:9px;padding:7px 11px;
+    font-size:11px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;}
+  .btn-adm{background:rgba(251,191,36,0.12);color:var(--yellow);
+    border:1px solid rgba(251,191,36,0.25);border-radius:9px;padding:7px 11px;
+    font-size:11px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;}
+
+  .fixed-area{flex-shrink:0;padding:12px 16px 0;display:flex;flex-direction:column;gap:10px;}
+
+  /* FORM */
+  .form-card{background:var(--glass);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+    border:1px solid var(--glass-border);border-radius:var(--radius);padding:13px;
+    display:flex;flex-direction:column;gap:9px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.35),inset 0 1px 0 rgba(255,255,255,0.07);
+    position:relative;overflow:hidden;}
+  .form-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent);}
+  .form-label{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.8px;}
+  .input-row{display:flex;gap:8px;align-items:flex-end;}
+  .input-group{display:flex;flex-direction:column;gap:4px;flex:1;}
+  .input-group.num-group{flex:0 0 90px;}
+  .input-group.taxa-group{flex:0 0 120px;}
+  .input-group label{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;padding-left:3px;}
+  .input-group input{background:var(--input-bg);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    border:1.5px solid var(--glass-border);border-radius:var(--radius-sm);
+    padding:11px 13px;color:var(--text);font-size:15px;font-weight:500;font-family:'Inter',sans-serif;
+    outline:none;width:100%;-webkit-appearance:none;transition:border-color 0.15s,box-shadow 0.15s;}
+  .input-group input:focus{border-color:rgba(96,165,250,0.55);box-shadow:0 0 0 3px rgba(96,165,250,0.09);}
+  .input-group input::placeholder{color:rgba(148,163,184,0.3);}
+  .taxa-preview{font-size:12px;font-weight:600;color:var(--green);flex:1;padding-left:6px;align-self:center;}
+  .btn-add{background:linear-gradient(135deg,#3b6ef0,#818cf8);color:#fff;border:none;
+    border-radius:var(--radius-sm);padding:12px 16px;font-size:14px;font-weight:800;
+    font-family:'Inter',sans-serif;cursor:pointer;
+    box-shadow:0 4px 18px rgba(59,110,240,0.4);transition:opacity 0.15s,transform 0.1s;white-space:nowrap;}
+  .btn-add:active{opacity:0.85;transform:scale(0.98);}
+
+  /* STATS */
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .stat-card{background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    border:1px solid var(--glass-border);border-radius:var(--radius);padding:13px 15px;
+    display:flex;align-items:center;gap:11px;
+    box-shadow:0 4px 16px rgba(0,0,0,0.25),inset 0 1px 0 rgba(255,255,255,0.07);
+    position:relative;overflow:hidden;transition:transform 0.1s;}
+  .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent);}
+  .stat-card.blue{border-color:rgba(96,165,250,0.18);cursor:pointer;}
+  .stat-card.green{border-color:rgba(52,211,153,0.18);}
+  .stat-card.blue:active{transform:scale(0.98);background:var(--glass-hover);}
+  .stat-icon-box{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+  .blue .stat-icon-box{background:rgba(96,165,250,0.13);}
+  .green .stat-icon-box{background:rgba(52,211,153,0.13);}
+  .stat-info{display:flex;flex-direction:column;gap:2px;flex:1;}
+  .stat-label{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.7px;}
+  .stat-value{font-size:22px;font-weight:900;letter-spacing:-0.8px;line-height:1;}
+  .stat-value.money{font-size:18px;letter-spacing:-0.3px;
+    background:linear-gradient(135deg,#34d399,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .stat-tap-hint{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;}
+  .hint-text{font-size:10px;font-weight:600;color:rgba(96,165,250,0.5);}
+  .hint-arrow{font-size:16px;color:rgba(96,165,250,0.3);}
+
+  /* ADM */
+  .adm-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:14px 16px;}
+  .adm-scroll::-webkit-scrollbar{display:none;}
+  .adm-section-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;}
+  .adm-online-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+  .adm-ent-card{background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    border:1px solid var(--glass-border);border-radius:var(--radius-sm);padding:13px;
+    cursor:pointer;transition:transform 0.1s,background 0.15s;position:relative;overflow:hidden;}
+  .adm-ent-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,0.09),transparent);}
+  .adm-ent-card:active{transform:scale(0.98);background:var(--glass-hover);}
+  .adm-ent-avatar{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;margin-bottom:7px;}
+  .adm-ent-card-name{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px;}
+  .adm-ent-card-qtd{font-size:11px;font-weight:600;color:var(--text2);}
+  .adm-ent-card-taxa{font-size:16px;font-weight:900;color:var(--green);margin-top:4px;}
+  .online-dot{width:8px;height:8px;background:var(--green);border-radius:50%;
+    position:absolute;top:11px;right:11px;box-shadow:0 0 6px var(--green);}
+  .adm-day-card{background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    border:1px solid var(--glass-border);border-radius:var(--radius);padding:14px;
+    margin-bottom:10px;cursor:pointer;position:relative;overflow:hidden;transition:background 0.15s;}
+  .adm-day-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent);}
+  .adm-day-card:active{background:var(--glass-hover);}
+  .adm-day-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .adm-day-date{font-size:14px;font-weight:800;letter-spacing:-0.3px;}
+  .adm-day-total{font-size:14px;font-weight:800;color:var(--green);}
+  .adm-entregador-row{display:flex;align-items:center;justify-content:space-between;
+    padding:8px 10px;background:rgba(255,255,255,0.03);border-radius:10px;margin-bottom:5px;}
+  .adm-ent-name{font-size:12px;font-weight:700;color:var(--text);}
+  .adm-ent-info{font-size:10px;font-weight:500;color:var(--text2);margin-top:1px;}
+  .adm-ent-taxa{font-size:13px;font-weight:800;color:var(--accent);}
+
+  /* TOAST */
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(14px);
+    background:rgba(10,15,35,0.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    color:var(--text);border:1px solid var(--glass-border);padding:10px 22px;border-radius:30px;
+    font-size:13px;font-weight:600;font-family:'Inter',sans-serif;
+    opacity:0;transition:all 0.22s;z-index:300;white-space:nowrap;pointer-events:none;
+    box-shadow:0 8px 32px rgba(0,0,0,0.5);}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* MODALS */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    z-index:200;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity 0.22s;}
+  .modal-overlay.show{opacity:1;pointer-events:all;}
+  .modal-sheet{background:rgba(8,13,30,0.96);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);
+    border:1px solid var(--glass-border);border-bottom:none;border-radius:26px 26px 0 0;
+    padding:16px 20px 44px;width:100%;transform:translateY(100%);
+    transition:transform 0.28s cubic-bezier(0.4,0,0.2,1);box-shadow:0 -8px 40px rgba(0,0,0,0.5);}
+  .modal-overlay.show .modal-sheet{transform:translateY(0);}
+  .sheet-handle{width:38px;height:4px;background:rgba(255,255,255,0.13);border-radius:2px;margin:0 auto 20px;}
+
+  /* HISTÓRICO */
+  .hist-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .hist-title{font-size:18px;font-weight:800;letter-spacing:-0.5px;}
+  .hist-count{background:rgba(96,165,250,0.1);color:var(--accent);border:1px solid rgba(96,165,250,0.2);
+    border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;}
+  .hist-scroll{max-height:55vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;display:flex;flex-direction:column;gap:7px;}
+  .hist-scroll::-webkit-scrollbar{display:none;}
+  .hist-empty{text-align:center;padding:28px 20px;font-size:13px;font-weight:500;color:var(--text2);}
+  .hist-empty .ei{font-size:34px;margin-bottom:10px;opacity:0.4;}
+  .hist-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+    border-radius:var(--radius-sm);padding:12px 14px;display:flex;align-items:center;gap:11px;
+    cursor:pointer;transition:background 0.15s,transform 0.1s;position:relative;overflow:hidden;}
+  .hist-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent);}
+  .hist-card:active{background:rgba(255,255,255,0.07);transform:scale(0.99);}
+  .hc-num{background:linear-gradient(135deg,rgba(59,110,240,0.25),rgba(129,140,248,0.15));
+    border:1px solid rgba(96,165,250,0.18);color:var(--accent);border-radius:10px;
+    width:33px;height:33px;display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:800;flex-shrink:0;}
+  .hc-info{flex:1;min-width:0;}
+  .hc-addr{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .hc-time{font-size:11px;font-weight:500;color:var(--text2);margin-top:2px;}
+  .hc-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;}
+  .hc-taxa{font-size:14px;font-weight:800;color:var(--green);}
+  .hc-arr{font-size:13px;color:rgba(148,163,184,0.25);}
+
+  /* DETALHE */
+  .det-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(96,165,250,0.1);
+    border:1px solid rgba(96,165,250,0.2);border-radius:20px;padding:4px 12px;
+    font-size:11px;font-weight:700;color:var(--accent);margin-bottom:12px;}
+  .det-addr{font-size:20px;font-weight:800;letter-spacing:-0.5px;line-height:1.25;margin-bottom:2px;}
+  .det-sub{font-size:13px;font-weight:500;color:var(--text2);margin-bottom:16px;}
+  .det-taxa-box{background:rgba(52,211,153,0.07);border:1px solid rgba(52,211,153,0.16);
+    border-radius:var(--radius-sm);padding:15px;display:flex;align-items:center;gap:13px;margin-bottom:11px;cursor:pointer;}
+  .det-taxa-icon{width:40px;height:40px;background:rgba(52,211,153,0.13);border-radius:11px;
+    display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;}
+  .det-taxa-label{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px;}
+  .det-taxa-val{font-size:25px;font-weight:900;color:var(--green);letter-spacing:-0.8px;line-height:1;}
+  .det-dist-box{background:rgba(96,165,250,0.07);border:1px solid rgba(96,165,250,0.16);
+    border-radius:var(--radius-sm);padding:13px 15px;display:flex;align-items:center;gap:13px;margin-bottom:11px;}
+  .det-dist-icon{width:40px;height:40px;background:rgba(96,165,250,0.13);border-radius:11px;
+    display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;}
+  .det-dist-label{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px;}
+  .det-dist-val{font-size:19px;font-weight:900;color:var(--accent);letter-spacing:-0.5px;line-height:1;}
+  .det-dist-sub{font-size:11px;font-weight:500;color:var(--text2);margin-top:3px;}
+  .btn-rota{background:linear-gradient(135deg,rgba(96,165,250,0.15),rgba(129,140,248,0.1));
+    color:var(--accent);border:1px solid rgba(96,165,250,0.3);border-radius:var(--radius-sm);
+    padding:13px 16px;font-size:14px;font-weight:700;font-family:'Inter',sans-serif;
+    cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
+    margin-bottom:9px;transition:opacity 0.15s,transform 0.1s;}
+  .btn-rota:active{opacity:0.8;transform:scale(0.99);}
+  .btn-excluir{background:rgba(248,113,113,0.1);color:var(--red);
+    border:1px solid rgba(248,113,113,0.2);border-radius:var(--radius-sm);padding:13px;
+    font-size:15px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;width:100%;}
+  .btn-excluir:active{opacity:0.7;}
+
+  /* REL DIA */
+  .rel-ent-block{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);
+    border-radius:14px;padding:14px;margin-bottom:10px;}
+  .rel-ent-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .rel-ent-name{font-size:15px;font-weight:800;letter-spacing:-0.3px;}
+  .rel-ent-badge{background:rgba(52,211,153,0.12);color:var(--green);border:1px solid rgba(52,211,153,0.2);
+    border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;}
+  .rel-item{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+  .rel-item:last-child{border-bottom:none;}
+  .rel-item-taxa{font-size:12px;font-weight:700;color:var(--green);}
+  .rel-total-row{display:flex;justify-content:space-between;align-items:center;
+    padding-top:10px;margin-top:4px;border-top:1px solid rgba(255,255,255,0.08);}
+  .rel-total-label{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;}
+  .rel-total-val{font-size:18px;font-weight:900;color:var(--accent);}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<!-- LOGIN -->
+<div class="page active" id="pageLogin">
+  <div class="login-wrap">
+    <div class="login-logo">🛵</div>
+    <div class="login-title">Fatima Entregas</div>
+    <div class="login-sub">Faça login para continuar</div>
+    <div class="login-card">
+      <div>
+        <div class="login-label">Nome</div>
+        <input class="login-input" type="text" id="loginNome" placeholder="Seu nome" autocomplete="off" />
+      </div>
+      <div>
+        <div class="login-label">Senha</div>
+        <input class="login-input" type="password" id="loginSenha" placeholder="••••••" />
+      </div>
+      <div class="login-err" id="loginErr"></div>
+      <button class="btn-login" onclick="fazerLogin()">Entrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP ENTREGADOR -->
+<div class="page" id="pageApp">
+  <div class="sync-bar" id="syncBar">
+    <div class="sync-dot offline" id="syncDot"></div>
+    <span id="syncText">Conectando...</span>
+  </div>
+  <div class="header">
+    <div class="header-row">
+      <div class="logo">
+        <div class="logo-icon">🛵</div>
+        <div class="logo-text">
+          <h1 id="appNomeHeader">Entregador</h1>
+          <span id="appDataHeader"></span>
+        </div>
+      </div>
+      <div class="header-right">
+        <button class="btn-adm" id="btnAdmPanel" style="display:none" onclick="irParaAdm()">⚙️ ADM</button>
+        <button class="btn-sair" onclick="sair()">Sair</button>
+      </div>
+    </div>
+  </div>
+  <div class="fixed-area">
+    <div class="form-card">
+      <div class="form-label">Nova entrega</div>
+      <div class="input-row">
+        <div class="input-group">
+          <label>Rua / Avenida</label>
+          <input type="text" id="inputRua" placeholder="Ex: Rua das Flores" autocomplete="off" />
+        </div>
+        <div class="input-group num-group">
+          <label>Número</label>
+          <input type="text" id="inputNumero" placeholder="123" autocomplete="off" inputmode="numeric" />
+        </div>
+      </div>
+      <div class="input-row" style="align-items:flex-end;">
+        <div class="input-group taxa-group">
+          <label>Taxa (R$)</label>
+          <input type="number" id="inputTaxa" placeholder="Ex: 5,00" step="0.50" min="0" inputmode="decimal" />
+        </div>
+        <div class="taxa-preview" id="taxaPreview"></div>
+        <button class="btn-add" onclick="adicionarEntrega()">+ Registrar</button>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat-card blue" onclick="abrirHistorico()">
+        <div class="stat-icon-box">📦</div>
+        <div class="stat-info">
+          <div class="stat-label">Entregas</div>
+          <div class="stat-value" id="totalEntregas">0</div>
+        </div>
+        <div class="stat-tap-hint"><span class="hint-text">Ver</span><span class="hint-arrow">›</span></div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-icon-box">💰</div>
+        <div class="stat-info">
+          <div class="stat-label">Minhas Taxas</div>
+          <div class="stat-value money" id="totalTaxas">R$ 0,00</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADM -->
+<div class="page" id="pageAdm">
+  <div class="header">
+    <div class="header-row">
+      <div class="logo">
+        <div class="logo-icon">⚙️</div>
+        <div class="logo-text">
+          <h1>Painel ADM</h1>
+          <span id="admDataHeader"></span>
+        </div>
+      </div>
+      <div class="header-right">
+        <button class="btn-adm" onclick="renderAdm()" title="Atualizar">🔄</button>
+        <button class="btn-adm" onclick="voltarApp()">← Voltar</button>
+        <button class="btn-sair" onclick="sair()">Sair</button>
+      </div>
+    </div>
+  </div>
+  <div class="adm-scroll" id="admScroll"></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MODAL HISTÓRICO -->
+<div class="modal-overlay" id="modalHistorico" onclick="fecharHistorico(event)">
+  <div class="modal-sheet">
+    <div class="sheet-handle"></div>
+    <div class="hist-header">
+      <div class="hist-title">📋 Histórico</div>
+      <span class="hist-count" id="histCount">0 entregas</span>
+    </div>
+    <div class="hist-scroll" id="histScroll"></div>
+  </div>
+</div>
+
+<!-- MODAL DETALHE -->
+<div class="modal-overlay" id="modalDetalhe" onclick="fecharDetalhe(event)">
+  <div class="modal-sheet">
+    <div class="sheet-handle"></div>
+    <div class="det-badge" id="detBadge">🚀 Entrega #1</div>
+    <div class="det-addr" id="detAddr"></div>
+    <div class="det-sub" id="detSub"></div>
+    <div class="det-taxa-box" onclick="editarTaxa()" id="detTaxaBox">
+      <div class="det-taxa-icon">💵</div>
+      <div style="flex:1;">
+        <div class="det-taxa-label">Taxa <span style="font-size:9px;color:rgba(96,165,250,0.6);margin-left:4px;">✏️ editar</span></div>
+        <div class="det-taxa-val" id="detTaxa"></div>
+        <div id="detTaxaEdit" style="display:none;margin-top:6px;">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="number" id="inputEditTaxa" step="0.50" min="0" inputmode="decimal"
+              style="background:rgba(0,0,0,0.3);border:1.5px solid rgba(96,165,250,0.5);border-radius:10px;
+              padding:8px 12px;color:#f0f4ff;font-size:16px;font-weight:700;font-family:'Inter',sans-serif;
+              outline:none;width:110px;-webkit-appearance:none;" />
+            <button onclick="salvarTaxa(event)"
+              style="background:linear-gradient(135deg,#3b6ef0,#818cf8);color:#fff;border:none;
+              border-radius:10px;padding:9px 14px;font-size:13px;font-weight:800;
+              font-family:'Inter',sans-serif;cursor:pointer;white-space:nowrap;">Salvar</button>
+            <button onclick="cancelarEditTaxa(event)"
+              style="background:rgba(255,255,255,0.06);color:var(--text2);border:1px solid rgba(255,255,255,0.1);
+              border-radius:10px;padding:9px 10px;font-size:13px;font-weight:700;
+              font-family:'Inter',sans-serif;cursor:pointer;">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="det-dist-box" id="detDistBox" style="display:none;">
+      <div class="det-dist-icon">📏</div>
+      <div>
+        <div class="det-dist-label">Distância da lanchonete</div>
+        <div class="det-dist-val" id="detDistVal">Calculando...</div>
+      </div>
+    </div>
+    <button class="btn-rota" onclick="abrirRota()">🗺️ Abrir rota no Google Maps</button>
+    <button class="btn-excluir" id="btnExcluir" onclick="excluirAtual()">🗑 Excluir esta entrega</button>
+  </div>
+</div>
+
+<!-- MODAL REL DIA -->
+<div class="modal-overlay" id="modalRelDia" onclick="fecharRelDia(event)">
+  <div class="modal-sheet">
+    <div class="sheet-handle"></div>
+    <div class="hist-header">
+      <div class="hist-title" id="relDiaTitulo">📊 Relatório</div>
+    </div>
+    <div class="hist-scroll" id="relDiaConteudo" style="max-height:60vh;"></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  FIREBASE CONFIG
+// ══════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyC2H6o0S4oit32IiBQyt4-SM3VFqjvqL2I",
+  authDomain: "fatimaentregas-1022.firebaseapp.com",
+  databaseURL: "https://fatimaentregas-1022-default-rtdb.firebaseio.com",
+  projectId: "fatimaentregas-1022",
+  storageBucket: "fatimaentregas-1022.firebasestorage.app",
+  messagingSenderId: "509143838146",
+  appId: "1:509143838146:web:fcffed5c1fbeb880127a5b"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// ══════════════════════════════════════════
+//  USUÁRIOS
+// ══════════════════════════════════════════
+const USUARIOS = {
+  'adm':   { senha:'adm123',   tipo:'adm',        emoji:'⚙️' },
+  'Bruno': { senha:'bruno123', tipo:'entregador',  emoji:'🛵' },
+  'Entregador2': { senha:'ent2', tipo:'entregador', emoji:'🛵' },
+  'Entregador3': { senha:'ent3', tipo:'entregador', emoji:'🛵' },
+};
+
+// ══════════════════════════════════════════
+//  ESTADO
+// ══════════════════════════════════════════
+let usuarioAtual = null;
+let idAtual      = null;
+let entAtual     = null;
+let entregasLocal = [];   // cache local (funciona offline)
+let unsubscribe  = null;  // listener Firebase
+
+const ORIGEM = 'R. Amendoinzeiro, 150, Leonor, Londrina, PR';
+
+// ══════════════════════════════════════════
+//  UTILITÁRIOS
+// ══════════════════════════════════════════
+function fmt(v){ return 'R$ ' + v.toFixed(2).replace('.', ','); }
+function fmtHora(ts){
+  const d = new Date(ts);
+  return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+}
+function hoje(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function fmtData(str){
+  const [y,m,d] = str.split('-');
+  const M = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  return `${d} de ${M[parseInt(m)-1]} de ${y}`;
+}
+
+// caminho Firebase: entregas/{user}/{data}/{id}
+function pathUser(user){ return `entregas/${user}/${hoje()}`; }
+
+// ══════════════════════════════════════════
+//  STATUS SYNC
+// ══════════════════════════════════════════
+function setSyncStatus(status, text){
+  const dot  = document.getElementById('syncDot');
+  const txt  = document.getElementById('syncText');
+  dot.className = 'sync-dot ' + status;
+  txt.textContent = text;
+}
+
+// detecta online/offline
+window.addEventListener('online',  () => setSyncStatus('online',  '✓ Online — sincronizado'));
+window.addEventListener('offline', () => setSyncStatus('offline', '⚠️ Offline — salvando local'));
+
+// monitora conexão Firebase
+db.ref('.info/connected').on('value', snap => {
+  if (snap.val()) {
+    setSyncStatus('online', '✓ Online — sincronizado');
+  } else {
+    setSyncStatus('offline', '⚠️ Offline — salvando local');
+  }
+});
+
+// ══════════════════════════════════════════
+//  LOGIN
+// ══════════════════════════════════════════
+function fazerLogin(){
+  const nome  = document.getElementById('loginNome').value.trim();
+  const senha = document.getElementById('loginSenha').value;
+  const err   = document.getElementById('loginErr');
+  const user  = Object.keys(USUARIOS).find(k => k.toLowerCase() === nome.toLowerCase());
+  if (!user || USUARIOS[user].senha !== senha){
+    err.textContent = 'Nome ou senha incorretos.';
+    return;
+  }
+  err.textContent = '';
+  usuarioAtual    = user;
+  document.getElementById('loginNome').value  = '';
+  document.getElementById('loginSenha').value = '';
+  entrarApp();
+}
+
+document.getElementById('loginNome').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('loginSenha').focus(); });
+document.getElementById('loginSenha').addEventListener('keydown', e=>{ if(e.key==='Enter') fazerLogin(); });
+
+function entrarApp(){
+  mostrarPagina('pageApp');
+  document.getElementById('appNomeHeader').textContent = usuarioAtual;
+  document.getElementById('appDataHeader').textContent = fmtData(hoje());
+  document.getElementById('btnAdmPanel').style.display = USUARIOS[usuarioAtual].tipo === 'adm' ? '' : 'none';
+  setSyncStatus('syncing', 'Conectando...');
+  escutarEntregas();
+}
+
+function sair(){
+  if(unsubscribe){ unsubscribe(); unsubscribe=null; }
+  if(window._admInterval){ clearInterval(window._admInterval); }
+  usuarioAtual=null; idAtual=null; entAtual=null; entregasLocal=[];
+  mostrarPagina('pageLogin');
+}
+
+function irParaAdm(){
+  mostrarPagina('pageAdm');
+  renderAdm();
+  if(window._admInterval) clearInterval(window._admInterval);
+  window._admInterval = setInterval(()=>{
+    if(document.getElementById('pageAdm').classList.contains('active')) renderAdm();
+    else clearInterval(window._admInterval);
+  }, 10000);
+}
+
+function voltarApp(){
+  if(window._admInterval){ clearInterval(window._admInterval); }
+  mostrarPagina('pageApp');
+}
+
+function mostrarPagina(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ══════════════════════════════════════════
+//  FIREBASE — ESCUTAR ENTREGAS EM TEMPO REAL
+// ══════════════════════════════════════════
+function escutarEntregas(){
+  if(unsubscribe){ unsubscribe(); }
+  const ref = db.ref(pathUser(usuarioAtual));
+
+  // Firebase persiste offline automaticamente (enablePersistence)
+  ref.on('value', snap=>{
+    const data = snap.val() || {};
+    entregasLocal = Object.values(data).sort((a,b)=>a.ts-b.ts);
+    atualizarStats();
+    // Se histórico aberto, atualiza
+    if(document.getElementById('modalHistorico').classList.contains('show')) renderHistorico();
+  });
+
+  unsubscribe = () => ref.off('value');
+}
+
+// ══════════════════════════════════════════
+//  STATS
+// ══════════════════════════════════════════
+function atualizarStats(){
+  const soma = entregasLocal.reduce((s,e)=>s+e.taxa,0);
+  document.getElementById('totalEntregas').textContent = entregasLocal.length;
+  document.getElementById('totalTaxas').textContent    = fmt(soma);
+}
+
+// ══════════════════════════════════════════
+//  ADICIONAR ENTREGA
+// ══════════════════════════════════════════
+document.getElementById('inputTaxa').addEventListener('input', function(){
+  const v = parseFloat(this.value);
+  document.getElementById('taxaPreview').textContent = (!isNaN(v)&&v>0) ? '→ '+fmt(v) : '';
+});
+
+function adicionarEntrega(){
+  const rua    = document.getElementById('inputRua').value.trim();
+  const numero = document.getElementById('inputNumero').value.trim();
+  const taxaRaw= document.getElementById('inputTaxa').value.trim();
+  if(!rua){ toast('⚠️ Digite a rua!'); document.getElementById('inputRua').focus(); return; }
+  const taxa = parseFloat(taxaRaw);
+  if(!taxaRaw||isNaN(taxa)||taxa<0){ toast('⚠️ Taxa inválida!'); document.getElementById('inputTaxa').focus(); return; }
+
+  const id  = Date.now();
+  const ent = { id, rua, numero: numero||'S/N', taxa, ts: id, user: usuarioAtual };
+
+  // Salva no Firebase (funciona offline — sincroniza quando tiver internet)
+  db.ref(`${pathUser(usuarioAtual)}/${id}`).set(ent);
+
+  document.getElementById('inputRua').value    = '';
+  document.getElementById('inputNumero').value = '';
+  document.getElementById('inputTaxa').value   = '';
+  document.getElementById('taxaPreview').textContent = '';
+  document.getElementById('inputRua').focus();
+  toast('✓ Entrega registrada!');
+}
+
+document.getElementById('inputRua').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('inputNumero').focus(); });
+document.getElementById('inputNumero').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('inputTaxa').focus(); });
+document.getElementById('inputTaxa').addEventListener('keydown', e=>{ if(e.key==='Enter') adicionarEntrega(); });
+
+// ══════════════════════════════════════════
+//  HISTÓRICO
+// ══════════════════════════════════════════
+function abrirHistorico(){ renderHistorico(); document.getElementById('modalHistorico').classList.add('show'); }
+function fecharHistorico(ev){
+  if(!ev||ev.target===document.getElementById('modalHistorico'))
+    document.getElementById('modalHistorico').classList.remove('show');
+}
+
+function renderHistorico(){
+  const lista = entregasLocal;
+  const total = lista.length;
+  document.getElementById('histCount').textContent = total+(total===1?' entrega':' entregas');
+  const el = document.getElementById('histScroll');
+  if(total===0){
+    el.innerHTML=`<div class="hist-empty"><div class="ei">📋</div><p>Nenhuma entrega ainda.</p></div>`;
+    return;
+  }
+  el.innerHTML = [...lista].reverse().map((e,i)=>{
+    const num = total-i;
+    return `<div class="hist-card" onclick="abrirDetalhe('${e.id}','${usuarioAtual}','${hoje()}')">
+      <div class="hc-num">${num}</div>
+      <div class="hc-info">
+        <div class="hc-addr">${e.rua}</div>
+        <div class="hc-time">nº ${e.numero} · 🕐 ${fmtHora(e.ts)}</div>
+      </div>
+      <div class="hc-right">
+        <div class="hc-taxa">${fmt(e.taxa)}</div>
+        <div class="hc-arr">›</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+//  DETALHE
+// ══════════════════════════════════════════
+function abrirDetalhe(id, user, data){
+  db.ref(`entregas/${user}/${data}/${id}`).once('value', snap=>{
+    const e = snap.val();
+    if(!e) return;
+    idAtual  = id;
+    entAtual = { ...e, _user: user, _data: data };
+
+    const lista = user===usuarioAtual ? entregasLocal : [];
+    const num   = lista.findIndex(x=>String(x.id)===String(id))+1 || '?';
+
+    document.getElementById('detBadge').textContent = '🚀 Entrega #'+num;
+    document.getElementById('detAddr').textContent  = e.rua;
+    document.getElementById('detSub').textContent   = 'Número '+e.numero+' · '+fmtHora(e.ts);
+    document.getElementById('detTaxa').textContent  = fmt(e.taxa);
+    document.getElementById('detDistBox').style.display = 'none';
+    fecharEditTaxa();
+
+    const podeExcluir = USUARIOS[usuarioAtual].tipo==='adm' || user===usuarioAtual;
+    document.getElementById('btnExcluir').style.display = podeExcluir ? '' : 'none';
+
+    document.getElementById('modalDetalhe').classList.add('show');
+    calcularDistancia(e);
+  });
+}
+
+function fecharDetalhe(ev){
+  if(!ev||ev.target===document.getElementById('modalDetalhe')){
+    document.getElementById('modalDetalhe').classList.remove('show');
+    document.getElementById('detDistBox').style.display='none';
+    fecharEditTaxa();
+    idAtual=null; entAtual=null;
+  }
+}
+
+// ── Editar taxa ──
+function editarTaxa(){
+  const ed=document.getElementById('detTaxaEdit');
+  if(ed.style.display==='flex') return;
+  document.getElementById('inputEditTaxa').value = entAtual ? entAtual.taxa.toFixed(2) : '';
+  document.getElementById('detTaxa').style.display='none';
+  ed.style.display='flex';
+  setTimeout(()=>document.getElementById('inputEditTaxa').focus(),50);
+}
+function salvarTaxa(ev){
+  ev.stopPropagation();
+  const nova=parseFloat(document.getElementById('inputEditTaxa').value.trim());
+  if(isNaN(nova)||nova<0){ toast('⚠️ Taxa inválida!'); return; }
+  db.ref(`entregas/${entAtual._user}/${entAtual._data}/${idAtual}/taxa`).set(nova);
+  document.getElementById('detTaxa').textContent=fmt(nova);
+  fecharEditTaxa();
+  toast('✓ Taxa atualizada!');
+}
+function cancelarEditTaxa(ev){ ev.stopPropagation(); fecharEditTaxa(); }
+function fecharEditTaxa(){
+  document.getElementById('detTaxaEdit').style.display='none';
+  document.getElementById('detTaxa').style.display='';
+}
+
+// ── Excluir ──
+function excluirAtual(){
+  if(!idAtual||!entAtual) return;
+  db.ref(`entregas/${entAtual._user}/${entAtual._data}/${idAtual}`).remove();
+  document.getElementById('modalDetalhe').classList.remove('show');
+  idAtual=null; entAtual=null;
+  toast('Entrega removida');
+}
+
+// ── Rota ──
+function abrirRota(){
+  if(!entAtual) return;
+  const destino=encodeURIComponent(entAtual.rua+', '+(entAtual.numero||'')+', Londrina, PR, Brasil');
+  if(navigator.geolocation){
+    toast('📍 Obtendo localização...');
+    navigator.geolocation.getCurrentPosition(
+      pos=>{
+        const url=`https://www.google.com/maps/dir/?api=1&origin=${pos.coords.latitude},${pos.coords.longitude}&destination=${destino}&travelmode=driving`;
+        window.open(url,'_blank');
+      },
+      ()=>window.open(`https://www.google.com/maps/dir/?api=1&destination=${destino}&travelmode=driving`,'_blank'),
+      {timeout:5000,enableHighAccuracy:true}
+    );
+  } else {
+    window.open(`https://www.google.com/maps/dir/?api=1&destination=${destino}&travelmode=driving`,'_blank');
+  }
+}
+
+// ── Distância ──
+async function calcularDistancia(e){
+  const box=document.getElementById('detDistBox');
+  const val=document.getElementById('detDistVal');
+  box.style.display='flex'; val.innerHTML='Calculando...';
+  try{
+    const d=encodeURIComponent(e.rua+', '+(e.numero||'')+', Londrina, PR, Brasil');
+    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${d}&format=json&limit=1`,{headers:{'Accept-Language':'pt-BR'}});
+    const data=await r.json();
+    if(data&&data.length>0){
+      const latO=-23.3425,lngO=-51.2053,latD=parseFloat(data[0].lat),lngD=parseFloat(data[0].lon);
+      const R=6371,dL=(latD-latO)*Math.PI/180,dl=(lngD-lngO)*Math.PI/180;
+      const a=Math.sin(dL/2)**2+Math.cos(latO*Math.PI/180)*Math.cos(latD*Math.PI/180)*Math.sin(dl/2)**2;
+      const km=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))*1.3;
+      val.innerHTML=km<1
+        ?`${(km*1000).toFixed(0)} m <span class="det-dist-sub">~${Math.ceil(km/0.3)} min de moto</span>`
+        :`${km.toFixed(1)} km <span class="det-dist-sub">~${Math.ceil(km/0.3)} min de moto</span>`;
+    } else val.innerHTML='<span style="font-size:13px;color:var(--text2)">Endereço não encontrado</span>';
+  } catch { val.innerHTML='<span style="font-size:13px;color:var(--text2)">Sem conexão</span>'; }
+}
+
+// ══════════════════════════════════════════
+//  PAINEL ADM
+// ══════════════════════════════════════════
+function renderAdm(){
+  const d = new Date();
+  document.getElementById('admDataHeader').textContent = fmtData(hoje());
+  const scroll = document.getElementById('admScroll');
+  const hora = d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')+':'+d.getSeconds().toString().padStart(2,'0');
+  const entregadores = Object.keys(USUARIOS).filter(u=>USUARIOS[u].tipo==='entregador');
+
+  let html = `<div style="text-align:right;font-size:11px;font-weight:600;color:rgba(148,163,184,0.4);margin-bottom:12px;">🔄 ${hora}</div>`;
+  html += `<div class="adm-section-title">Hoje — ${fmtData(hoje())}</div>`;
+  html += `<div class="adm-online-grid">`;
+
+  // Busca dados de hoje de todos os entregadores do Firebase
+  let totalHoje = 0;
+  let pendentes = entregadores.length;
+  let dadosEnt  = {};
+
+  entregadores.forEach(user=>{
+    db.ref(`entregas/${user}/${hoje()}`).once('value', snap=>{
+      const data = snap.val()||{};
+      dadosEnt[user] = Object.values(data).sort((a,b)=>a.ts-b.ts);
+      pendentes--;
+      if(pendentes===0) renderAdmComDados(dadosEnt, entregadores, scroll, hora);
+    });
+  });
+}
+
+function renderAdmComDados(dadosEnt, entregadores, scroll, hora){
+  const hoje_ = hoje();
+  let html = `<div style="text-align:right;font-size:11px;font-weight:600;color:rgba(148,163,184,0.4);margin-bottom:12px;">🔄 ${hora}</div>`;
+  html += `<div class="adm-section-title">Hoje — ${fmtData(hoje_)}</div>`;
+  html += `<div class="adm-online-grid">`;
+
+  let totalHoje = 0;
+  entregadores.forEach(user=>{
+    const lista = dadosEnt[user]||[];
+    const soma  = lista.reduce((s,e)=>s+e.taxa,0);
+    totalHoje  += soma;
+    html += `<div class="adm-ent-card" onclick="verEntregadorHoje('${user}')">
+      <div class="online-dot"></div>
+      <div class="adm-ent-avatar">${USUARIOS[user].emoji}</div>
+      <div class="adm-ent-card-name">${user}</div>
+      <div class="adm-ent-card-qtd">${lista.length} entrega${lista.length!==1?'s':''}</div>
+      <div class="adm-ent-card-taxa">${fmt(soma)}</div>
+    </div>`;
+  });
+
+  html += `</div>`;
+  html += `<div style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.18);
+    border-radius:14px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+    <span style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;">Total do Dia</span>
+    <span style="font-size:22px;font-weight:900;color:var(--green);letter-spacing:-0.6px;">${fmt(totalHoje)}</span>
+  </div>`;
+
+  // Histórico de dias anteriores do Firebase
+  db.ref('entregas').once('value', snap=>{
+    const allData = snap.val()||{};
+    const dias = new Set();
+    Object.values(allData).forEach(userDays=>{
+      Object.keys(userDays).forEach(d=>dias.add(d));
+    });
+    const diasAnt = [...dias].sort().reverse().filter(d=>d!==hoje_);
+
+    if(diasAnt.length>0){
+      html += `<div class="adm-section-title">Dias Anteriores</div>`;
+      diasAnt.forEach(dia=>{
+        let totalDia=0, totalEnt=0, resumo='';
+        entregadores.forEach(user=>{
+          const lista=(allData[user]&&allData[user][dia]) ? Object.values(allData[user][dia]) : [];
+          const soma=lista.reduce((s,e)=>s+e.taxa,0);
+          if(lista.length>0){
+            totalDia+=soma; totalEnt+=lista.length;
+            resumo+=`<div class="adm-entregador-row">
+              <div><div class="adm-ent-name">${user}</div>
+              <div class="adm-ent-info">${lista.length} entrega${lista.length!==1?'s':''}</div></div>
+              <div class="adm-ent-taxa">${fmt(soma)}</div>
+            </div>`;
+          }
+        });
+        if(totalEnt>0){
+          html+=`<div class="adm-day-card" onclick="verRelDia('${dia}')">
+            <div class="adm-day-header">
+              <div class="adm-day-date">${fmtData(dia)}</div>
+              <div class="adm-day-total">${fmt(totalDia)}</div>
+            </div>${resumo}
+          </div>`;
+        }
+      });
+    }
+
+    scroll.innerHTML = html;
+  });
+}
+
+// ── Ver entregador hoje ──
+function verEntregadorHoje(user){
+  db.ref(`entregas/${user}/${hoje()}`).once('value', snap=>{
+    const data = snap.val()||{};
+    const lista = Object.values(data).sort((a,b)=>a.ts-b.ts);
+    const total = lista.length;
+    document.getElementById('relDiaTitulo').textContent = `🛵 ${user} — Hoje`;
+    let html='';
+    if(total===0){
+      html=`<div class="hist-empty"><div class="ei">📦</div><p>Nenhuma entrega hoje.</p></div>`;
+    } else {
+      html=`<div class="rel-ent-block"><div class="rel-ent-header">
+        <span class="rel-ent-name">${user}</span>
+        <span class="rel-ent-badge">${total} entregas</span></div>`;
+      lista.forEach((e,i)=>{
+        html+=`<div class="rel-item" onclick="abrirDetalhe('${e.id}','${user}','${hoje()}');fecharRelDia();" style="cursor:pointer;">
+          <div><div style="font-size:12px;font-weight:600;color:var(--text);">${i+1}. ${e.rua}, nº ${e.numero}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px;">🕐 ${fmtHora(e.ts)}</div></div>
+          <div class="rel-item-taxa">${fmt(e.taxa)}</div></div>`;
+      });
+      const soma=lista.reduce((s,e)=>s+e.taxa,0);
+      html+=`<div class="rel-total-row"><span class="rel-total-label">Total</span><span class="rel-total-val">${fmt(soma)}</span></div></div>`;
+    }
+    document.getElementById('relDiaConteudo').innerHTML=html;
+    document.getElementById('modalRelDia').classList.add('show');
+  });
+}
+
+// ── Ver rel dia anterior ──
+function verRelDia(dia){
+  document.getElementById('relDiaTitulo').textContent=`📊 ${fmtData(dia)}`;
+  const entregadores=Object.keys(USUARIOS).filter(u=>USUARIOS[u].tipo==='entregador');
+  db.ref('entregas').once('value', snap=>{
+    const allData=snap.val()||{};
+    let html='', totalGeral=0;
+    entregadores.forEach(user=>{
+      const lista=allData[user]&&allData[user][dia] ? Object.values(allData[user][dia]).sort((a,b)=>a.ts-b.ts) : [];
+      if(lista.length===0) return;
+      const soma=lista.reduce((s,e)=>s+e.taxa,0);
+      totalGeral+=soma;
+      html+=`<div class="rel-ent-block"><div class="rel-ent-header">
+        <span class="rel-ent-name">${user}</span>
+        <span class="rel-ent-badge">${lista.length} entregas</span></div>`;
+      lista.forEach((e,i)=>{
+        html+=`<div class="rel-item">
+          <div><div style="font-size:12px;font-weight:600;color:var(--text);">${i+1}. ${e.rua}, nº ${e.numero}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px;">🕐 ${fmtHora(e.ts)}</div></div>
+          <div class="rel-item-taxa">${fmt(e.taxa)}</div></div>`;
+      });
+      html+=`<div class="rel-total-row"><span class="rel-total-label">${user}</span><span class="rel-total-val">${fmt(soma)}</span></div></div>`;
+    });
+    html+=`<div style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.18);
+      border-radius:14px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+      <span style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;">Total Geral</span>
+      <span style="font-size:22px;font-weight:900;color:var(--green);letter-spacing:-0.6px;">${fmt(totalGeral)}</span></div>`;
+    document.getElementById('relDiaConteudo').innerHTML=html;
+    document.getElementById('modalRelDia').classList.add('show');
+  });
+}
+
+function fecharRelDia(ev){
+  if(!ev||ev.target===document.getElementById('modalRelDia'))
+    document.getElementById('modalRelDia').classList.remove('show');
+}
+
+// ══════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+</script>
+</body>
+</html>

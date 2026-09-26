@@ -111,33 +111,37 @@
   .input-group input::placeholder{color:rgba(148,163,184,0.3);}
   .taxa-preview{font-size:12px;font-weight:600;color:var(--green);flex:1;padding-left:6px;align-self:center;}
   /* AUTOCOMPLETE */
-  .autocomplete-wrap{position:relative;flex:1;}
+  .autocomplete-wrap{position:static;flex:1;}
+  .autocomplete-outer{position:relative;}
   .autocomplete-list{
-    position:absolute;top:100%;left:0;right:0;
+    position:fixed;
+    left:16px;right:16px;
     background:rgba(8,13,30,0.98);
-    backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-    border:1px solid rgba(96,165,250,0.3);
+    backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+    border:1px solid rgba(96,165,250,0.35);
     border-radius:var(--radius-sm);
-    margin-top:4px;
-    z-index:999;
-    max-height:200px;
+    z-index:9999;
+    max-height:240px;
     overflow-y:auto;
-    box-shadow:0 8px 32px rgba(0,0,0,0.5);
+    overflow-x:hidden;
+    box-shadow:0 12px 40px rgba(0,0,0,0.7);
     display:none;
   }
   .autocomplete-list.show{display:block;}
+  .autocomplete-list::-webkit-scrollbar{display:none;}
   .autocomplete-item{
-    padding:11px 14px;
+    padding:12px 14px;
     cursor:pointer;
     border-bottom:1px solid rgba(255,255,255,0.05);
     transition:background 0.12s;
+    -webkit-tap-highlight-color:transparent;
   }
   .autocomplete-item:last-child{border-bottom:none;}
-  .autocomplete-item:active{background:rgba(96,165,250,0.12);}
-  .autocomplete-item-rua{font-size:13px;font-weight:600;color:var(--text);}
-  .autocomplete-item-info{font-size:11px;font-weight:500;color:var(--text2);margin-top:2px;}
+  .autocomplete-item:active{background:rgba(96,165,250,0.15);}
+  .autocomplete-item-rua{font-size:14px;font-weight:600;color:var(--text);}
+  .autocomplete-item-info{font-size:11px;font-weight:500;color:var(--text2);margin-top:3px;}
   .autocomplete-item-taxa{font-size:12px;font-weight:700;color:var(--green);}
-  .autocomplete-highlight{color:var(--accent);}
+  .autocomplete-highlight{color:var(--accent);font-weight:800;}
 
   .btn-add{background:linear-gradient(135deg,#3b6ef0,#818cf8);color:#fff;border:none;
     border-radius:var(--radius-sm);padding:12px 16px;font-size:14px;font-weight:800;
@@ -364,17 +368,20 @@
       <div class="form-label">Nova entrega</div>
       <div class="input-row">
         <div class="autocomplete-wrap">
-          <div class="input-group">
-            <label>Rua / Avenida</label>
-            <input type="text" id="inputRua" placeholder="Ex: Rua das Flores" autocomplete="off" />
+          <div class="autocomplete-outer">
+            <div class="input-group">
+              <label>Rua / Avenida</label>
+              <input type="text" id="inputRua" placeholder="Ex: Rua das Flores" autocomplete="off" />
+            </div>
           </div>
-          <div class="autocomplete-list" id="autocompleteList"></div>
         </div>
         <div class="input-group num-group">
           <label>Número</label>
           <input type="text" id="inputNumero" placeholder="123" autocomplete="off" inputmode="numeric" />
         </div>
       </div>
+      <!-- Lista de sugestões fora do flow -->
+      <div class="autocomplete-list" id="autocompleteList"></div>
       <div class="input-row" style="align-items:flex-end;">
         <div class="input-group taxa-group">
           <label>Taxa (R$)</label>
@@ -706,20 +713,35 @@ function mostrarSugestoes(texto){
   if(!texto || texto.length < 2){ lista.classList.remove('show'); return; }
 
   const q = texto.toLowerCase();
+
   const resultados = Object.values(enderecoHistorico)
     .filter(e => e.rua && e.rua.toLowerCase().includes(q))
-    .sort((a,b) => b.count - a.count)
-    .slice(0, 6);
+    .sort((a,b) => {
+      const ruaA = a.rua.toLowerCase();
+      const ruaB = b.rua.toLowerCase();
+      if(ruaA !== ruaB) return ruaA.localeCompare(ruaB);
+      return (parseInt(a.numero)||0) - (parseInt(b.numero)||0);
+    })
+    .slice(0, 10);
 
   if(resultados.length === 0){ lista.classList.remove('show'); return; }
 
+  // Posiciona a lista logo abaixo do input de rua
+  const inputEl = document.getElementById('inputRua');
+  const rect = inputEl.getBoundingClientRect();
+  lista.style.top  = (rect.bottom + 6) + 'px';
+  lista.style.left = '16px';
+  lista.style.right = '16px';
+
   lista.innerHTML = resultados.map(e=>{
-    const ruaHighlight = e.rua.replace(new RegExp(`(${texto})`, 'gi'),
-      '<span class="autocomplete-highlight">$1</span>');
-    return `<div class="autocomplete-item" onclick="selecionarEndereco('${e.rua.replace(/'/g,"\\'")}','${e.numero}',${e.taxa})">
-      <div class="autocomplete-item-rua">${ruaHighlight}</div>
+    const ruaHighlight = e.rua.replace(
+      new RegExp(`(${texto.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'),
+      '<span class="autocomplete-highlight">$1</span>'
+    );
+    return `<div class="autocomplete-item" ontouchstart="" onclick="selecionarEndereco('${e.rua.replace(/'/g,"\\'")}','${e.numero}',${e.taxa})">
+      <div class="autocomplete-item-rua">${ruaHighlight}, nº ${e.numero}</div>
       <div class="autocomplete-item-info">
-        nº ${e.numero} &nbsp;·&nbsp; <span class="autocomplete-item-taxa">${fmt(e.taxa)}</span>
+        Taxa: <span class="autocomplete-item-taxa">${fmt(e.taxa)}</span>
         &nbsp;·&nbsp; ${e.count}x entregue
       </div>
     </div>`;

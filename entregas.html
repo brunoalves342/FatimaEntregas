@@ -384,6 +384,20 @@
       <div class="hist-title">📋 Histórico</div>
       <span class="hist-count" id="histCount">0 entregas</span>
     </div>
+    <!-- ABAS -->
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-shrink:0;">
+      <button id="abaHoje" onclick="trocarAba('hoje')"
+        style="flex:1;padding:9px;border-radius:12px;font-size:13px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;
+        background:linear-gradient(135deg,#3b6ef0,#818cf8);color:#fff;border:none;
+        box-shadow:0 4px 12px rgba(59,110,240,0.35);">
+        Hoje
+      </button>
+      <button id="abaAnteriores" onclick="trocarAba('anteriores')"
+        style="flex:1;padding:9px;border-radius:12px;font-size:13px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;
+        background:rgba(255,255,255,0.06);color:var(--text2);border:1px solid rgba(255,255,255,0.1);">
+        Dias Anteriores
+      </button>
+    </div>
     <div class="hist-scroll" id="histScroll"></div>
   </div>
 </div>
@@ -437,7 +451,7 @@
     <div class="hist-header">
       <div class="hist-title" id="relDiaTitulo">📊 Relatório</div>
     </div>
-    <div class="hist-scroll" id="relDiaConteudo" style="max-height:60vh;"></div>
+    <div class="hist-scroll" id="relDiaConteudo"></div>
   </div>
 </div>
 
@@ -646,7 +660,39 @@ document.getElementById('inputTaxa').addEventListener('keydown', e=>{ if(e.key==
 // ══════════════════════════════════════════
 //  HISTÓRICO
 // ══════════════════════════════════════════
-function abrirHistorico(){ renderHistorico(); document.getElementById('modalHistorico').classList.add('show'); }
+let abaAtiva = 'hoje';
+
+function trocarAba(aba){
+  abaAtiva = aba;
+  const btnHoje = document.getElementById('abaHoje');
+  const btnAnt  = document.getElementById('abaAnteriores');
+
+  if(aba === 'hoje'){
+    btnHoje.style.background = 'linear-gradient(135deg,#3b6ef0,#818cf8)';
+    btnHoje.style.color = '#fff';
+    btnHoje.style.border = 'none';
+    btnAnt.style.background = 'rgba(255,255,255,0.06)';
+    btnAnt.style.color = 'var(--text2)';
+    btnAnt.style.border = '1px solid rgba(255,255,255,0.1)';
+    renderHistorico();
+  } else {
+    btnAnt.style.background = 'linear-gradient(135deg,#3b6ef0,#818cf8)';
+    btnAnt.style.color = '#fff';
+    btnAnt.style.border = 'none';
+    btnHoje.style.background = 'rgba(255,255,255,0.06)';
+    btnHoje.style.color = 'var(--text2)';
+    btnHoje.style.border = '1px solid rgba(255,255,255,0.1)';
+    renderDiasAnteriores();
+  }
+}
+
+function abrirHistorico(){
+  abaAtiva = 'hoje';
+  // reseta visual das abas
+  trocarAba('hoje');
+  document.getElementById('modalHistorico').classList.add('show');
+}
+
 function fecharHistorico(ev){
   if(!ev||ev.target===document.getElementById('modalHistorico'))
     document.getElementById('modalHistorico').classList.remove('show');
@@ -658,7 +704,7 @@ function renderHistorico(){
   document.getElementById('histCount').textContent = total+(total===1?' entrega':' entregas');
   const el = document.getElementById('histScroll');
   if(total===0){
-    el.innerHTML=`<div class="hist-empty"><div class="ei">📋</div><p>Nenhuma entrega ainda.</p></div>`;
+    el.innerHTML=`<div class="hist-empty"><div class="ei">📋</div><p>Nenhuma entrega hoje.</p></div>`;
     return;
   }
   el.innerHTML = [...lista].reverse().map((e,i)=>{
@@ -675,6 +721,83 @@ function renderHistorico(){
       </div>
     </div>`;
   }).join('');
+}
+
+function renderDiasAnteriores(){
+  const el = document.getElementById('histScroll');
+  el.innerHTML = `<div class="hist-empty"><div class="ei">🔄</div><p>Carregando...</p></div>`;
+
+  db.ref(`entregas/${usuarioAtual}`).once('value', snap=>{
+    const allDias = snap.val()||{};
+    const diasAnt = Object.keys(allDias).sort().reverse().filter(d=>d!==hoje());
+
+    document.getElementById('histCount').textContent = diasAnt.length + (diasAnt.length===1?' dia':' dias');
+
+    if(diasAnt.length===0){
+      el.innerHTML=`<div class="hist-empty"><div class="ei">📅</div><p>Nenhum dia anterior ainda.</p></div>`;
+      return;
+    }
+
+    el.innerHTML = diasAnt.map(dia=>{
+      const lista = Object.values(allDias[dia]).sort((a,b)=>a.ts-b.ts);
+      const soma  = lista.reduce((s,e)=>s+e.taxa,0);
+      const total = lista.length;
+      return `<div class="adm-day-card" onclick="verDiaEntregador('${dia}')">
+        <div class="adm-day-header">
+          <div class="adm-day-date">${fmtData(dia)}</div>
+          <div class="adm-day-total">${fmt(soma)}</div>
+        </div>
+        <div style="font-size:12px;font-weight:600;color:var(--text2);">
+          ${total} entrega${total!==1?'s':''} realizadas
+        </div>
+      </div>`;
+    }).join('');
+  });
+}
+
+function verDiaEntregador(dia){
+  db.ref(`entregas/${usuarioAtual}/${dia}`).once('value', snap=>{
+    const data  = snap.val()||{};
+    const lista = Object.values(data).sort((a,b)=>a.ts-b.ts);
+    const total = lista.length;
+    const soma  = lista.reduce((s,e)=>s+e.taxa,0);
+
+    const el = document.getElementById('histScroll');
+    document.getElementById('histCount').textContent = `${fmtData(dia)}`;
+
+    if(total===0){
+      el.innerHTML=`<div class="hist-empty"><div class="ei">📦</div><p>Nenhuma entrega nesse dia.</p></div>`;
+      return;
+    }
+
+    el.innerHTML = `
+      <div style="margin-bottom:10px;flex-shrink:0;">
+        <button onclick="renderDiasAnteriores()"
+          style="background:rgba(96,165,250,0.12);color:var(--accent);border:1px solid rgba(96,165,250,0.25);
+          border-radius:10px;padding:7px 14px;font-size:12px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;">
+          ← Voltar
+        </button>
+      </div>
+    ` + lista.reverse().map((e,i)=>{
+      const num = total-i;
+      return `<div class="hist-card" onclick="abrirDetalhe('${e.id}','${usuarioAtual}','${dia}')">
+        <div class="hc-num">${num}</div>
+        <div class="hc-info">
+          <div class="hc-addr">${e.rua}</div>
+          <div class="hc-time">nº ${e.numero} · 🕐 ${fmtHora(e.ts)}</div>
+        </div>
+        <div class="hc-right">
+          <div class="hc-taxa">${fmt(e.taxa)}</div>
+          <div class="hc-arr">›</div>
+        </div>
+      </div>`;
+    }).join('') + `
+      <div style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.18);
+        border-radius:14px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+        <span style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;">Total do dia</span>
+        <span style="font-size:18px;font-weight:900;color:var(--green);letter-spacing:-0.5px;">${fmt(soma)}</span>
+      </div>`;
+  });
 }
 
 // ══════════════════════════════════════════

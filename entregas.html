@@ -110,6 +110,35 @@
   .input-group input:focus{border-color:rgba(96,165,250,0.55);box-shadow:0 0 0 3px rgba(96,165,250,0.09);}
   .input-group input::placeholder{color:rgba(148,163,184,0.3);}
   .taxa-preview{font-size:12px;font-weight:600;color:var(--green);flex:1;padding-left:6px;align-self:center;}
+  /* AUTOCOMPLETE */
+  .autocomplete-wrap{position:relative;flex:1;}
+  .autocomplete-list{
+    position:absolute;top:100%;left:0;right:0;
+    background:rgba(8,13,30,0.98);
+    backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    border:1px solid rgba(96,165,250,0.3);
+    border-radius:var(--radius-sm);
+    margin-top:4px;
+    z-index:999;
+    max-height:200px;
+    overflow-y:auto;
+    box-shadow:0 8px 32px rgba(0,0,0,0.5);
+    display:none;
+  }
+  .autocomplete-list.show{display:block;}
+  .autocomplete-item{
+    padding:11px 14px;
+    cursor:pointer;
+    border-bottom:1px solid rgba(255,255,255,0.05);
+    transition:background 0.12s;
+  }
+  .autocomplete-item:last-child{border-bottom:none;}
+  .autocomplete-item:active{background:rgba(96,165,250,0.12);}
+  .autocomplete-item-rua{font-size:13px;font-weight:600;color:var(--text);}
+  .autocomplete-item-info{font-size:11px;font-weight:500;color:var(--text2);margin-top:2px;}
+  .autocomplete-item-taxa{font-size:12px;font-weight:700;color:var(--green);}
+  .autocomplete-highlight{color:var(--accent);}
+
   .btn-add{background:linear-gradient(135deg,#3b6ef0,#818cf8);color:#fff;border:none;
     border-radius:var(--radius-sm);padding:12px 16px;font-size:14px;font-weight:800;
     font-family:'Inter',sans-serif;cursor:pointer;
@@ -334,9 +363,12 @@
     <div class="form-card">
       <div class="form-label">Nova entrega</div>
       <div class="input-row">
-        <div class="input-group">
-          <label>Rua / Avenida</label>
-          <input type="text" id="inputRua" placeholder="Ex: Rua das Flores" autocomplete="off" />
+        <div class="autocomplete-wrap">
+          <div class="input-group">
+            <label>Rua / Avenida</label>
+            <input type="text" id="inputRua" placeholder="Ex: Rua das Flores" autocomplete="off" />
+          </div>
+          <div class="autocomplete-list" id="autocompleteList"></div>
         </div>
         <div class="input-group num-group">
           <label>Número</label>
@@ -586,6 +618,7 @@ function entrarApp(){
   document.getElementById('btnAdmPanel').style.display = USUARIOS[usuarioAtual].tipo === 'adm' ? '' : 'none';
   setSyncStatus('syncing', 'Conectando...');
   escutarEntregas();
+  carregarHistoricoEnderecos();
 }
 
 function sair(){
@@ -644,11 +677,84 @@ function atualizarStats(){
 }
 
 // ══════════════════════════════════════════
-//  ADICIONAR ENTREGA
+//  AUTOCOMPLETE DE ENDEREÇOS
 // ══════════════════════════════════════════
+let enderecoHistorico = {}; // { "rua|numero": { rua, numero, taxa, count } }
+
+// Carrega histórico de todos os dias do Firebase pra montar autocomplete
+function carregarHistoricoEnderecos(){
+  db.ref(`entregas/${usuarioAtual}`).once('value', snap=>{
+    const allDias = snap.val()||{};
+    enderecoHistorico = {};
+    Object.values(allDias).forEach(dia=>{
+      Object.values(dia).forEach(e=>{
+        const chave = (e.rua||'').toLowerCase()+'|'+(e.numero||'');
+        if(!enderecoHistorico[chave]){
+          enderecoHistorico[chave] = { rua: e.rua, numero: e.numero, taxa: e.taxa, count: 1 };
+        } else {
+          enderecoHistorico[chave].count++;
+          // Atualiza com a taxa mais recente
+          enderecoHistorico[chave].taxa = e.taxa;
+        }
+      });
+    });
+  });
+}
+
+function mostrarSugestoes(texto){
+  const lista = document.getElementById('autocompleteList');
+  if(!texto || texto.length < 2){ lista.classList.remove('show'); return; }
+
+  const q = texto.toLowerCase();
+  const resultados = Object.values(enderecoHistorico)
+    .filter(e => e.rua && e.rua.toLowerCase().includes(q))
+    .sort((a,b) => b.count - a.count)
+    .slice(0, 6);
+
+  if(resultados.length === 0){ lista.classList.remove('show'); return; }
+
+  lista.innerHTML = resultados.map(e=>{
+    const ruaHighlight = e.rua.replace(new RegExp(`(${texto})`, 'gi'),
+      '<span class="autocomplete-highlight">$1</span>');
+    return `<div class="autocomplete-item" onclick="selecionarEndereco('${e.rua.replace(/'/g,"\\'")}','${e.numero}',${e.taxa})">
+      <div class="autocomplete-item-rua">${ruaHighlight}</div>
+      <div class="autocomplete-item-info">
+        nº ${e.numero} &nbsp;·&nbsp; <span class="autocomplete-item-taxa">${fmt(e.taxa)}</span>
+        &nbsp;·&nbsp; ${e.count}x entregue
+      </div>
+    </div>`;
+  }).join('');
+
+  lista.classList.add('show');
+}
+
+function selecionarEndereco(rua, numero, taxa){
+  document.getElementById('inputRua').value    = rua;
+  document.getElementById('inputNumero').value = numero;
+  document.getElementById('inputTaxa').value   = taxa;
+  document.getElementById('taxaPreview').textContent = '→ ' + fmt(taxa);
+  document.getElementById('autocompleteList').classList.remove('show');
+  document.getElementById('inputTaxa').focus();
+}
+
+function fecharAutocomplete(){
+  setTimeout(()=>{
+    document.getElementById('autocompleteList').classList.remove('show');
+  }, 200);
+}
+
 document.getElementById('inputTaxa').addEventListener('input', function(){
   const v = parseFloat(this.value);
   document.getElementById('taxaPreview').textContent = (!isNaN(v)&&v>0) ? '→ '+fmt(v) : '';
+});
+
+// Listener do inputRua com autocomplete
+document.getElementById('inputRua').addEventListener('input', function(){
+  mostrarSugestoes(this.value.trim());
+});
+document.getElementById('inputRua').addEventListener('blur', fecharAutocomplete);
+document.getElementById('inputRua').addEventListener('focus', function(){
+  if(this.value.trim().length >= 2) mostrarSugestoes(this.value.trim());
 });
 
 function adicionarEntrega(){
@@ -665,10 +771,20 @@ function adicionarEntrega(){
   // Salva no Firebase (funciona offline — sincroniza quando tiver internet)
   db.ref(`${pathUser(usuarioAtual)}/${id}`).set(ent);
 
+  // Atualiza cache local de endereços
+  const chave = rua.toLowerCase()+'|'+(numero||'S/N');
+  if(!enderecoHistorico[chave]){
+    enderecoHistorico[chave] = { rua, numero: numero||'S/N', taxa, count: 1 };
+  } else {
+    enderecoHistorico[chave].count++;
+    enderecoHistorico[chave].taxa = taxa;
+  }
+
   document.getElementById('inputRua').value    = '';
   document.getElementById('inputNumero').value = '';
   document.getElementById('inputTaxa').value   = '';
   document.getElementById('taxaPreview').textContent = '';
+  document.getElementById('autocompleteList').classList.remove('show');
   document.getElementById('inputRua').focus();
   toast('✓ Entrega registrada!');
 }

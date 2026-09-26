@@ -679,6 +679,19 @@ function atualizarStats(){
 // ══════════════════════════════════════════
 let enderecoHistorico = {};
 
+// Normaliza o nome da rua removendo prefixos duplicados
+function normalizarRua(rua){
+  if(!rua) return '';
+  return rua.trim()
+    .replace(/^(rua|r\.|av\.|av |avenida|alameda|al\.|travessa|tv\.|praça|pça\.)\s+/i, '')
+    .trim();
+}
+
+// Monta chave única pelo nome normalizado + numero
+function chaveEndereco(rua, numero){
+  return normalizarRua(rua).toLowerCase() + '|' + (numero||'').trim();
+}
+
 // Carrega histórico de todos os dias do Firebase pra montar autocomplete
 function carregarHistoricoEnderecos(){
   enderecoHistorico = {};
@@ -692,10 +705,14 @@ function carregarHistoricoEnderecos(){
         if(!dia || typeof dia !== 'object') return;
         Object.values(dia).forEach(e=>{
           if(!e || !e.rua) return;
-          const chave = e.rua.trim().toLowerCase()+'|'+(e.numero||'').trim();
+          const chave = chaveEndereco(e.rua, e.numero);
+          // Guarda sempre o nome mais completo (com "Rua" na frente)
+          const ruaFull = e.rua.trim().match(/^(rua|av|avenida|alameda|travessa|praça)/i)
+            ? e.rua.trim()
+            : 'Rua ' + normalizarRua(e.rua);
           if(!enderecoHistorico[chave]){
             enderecoHistorico[chave] = {
-              rua: e.rua.trim(),
+              rua: ruaFull,
               numero: (e.numero||'S/N').trim(),
               taxa: e.taxa||0,
               count: 1
@@ -703,6 +720,10 @@ function carregarHistoricoEnderecos(){
           } else {
             enderecoHistorico[chave].count++;
             enderecoHistorico[chave].taxa = e.taxa||enderecoHistorico[chave].taxa;
+            // Prefere o nome mais longo (mais completo)
+            if(ruaFull.length > enderecoHistorico[chave].rua.length){
+              enderecoHistorico[chave].rua = ruaFull;
+            }
           }
         });
       });
@@ -783,16 +804,21 @@ function adicionarEntrega(){
   const taxa = parseFloat(taxaRaw);
   if(!taxaRaw||isNaN(taxa)||taxa<0){ toast('⚠️ Taxa inválida!'); document.getElementById('inputTaxa').focus(); return; }
 
-  const id  = Date.now();
-  const ent = { id, rua, numero: numero||'S/N', taxa, ts: id, user: usuarioAtual };
+  // Normaliza a rua antes de salvar
+  const ruaNorm = rua.match(/^(rua|av|avenida|alameda|travessa|praça)/i)
+    ? rua.trim()
+    : 'Rua ' + normalizarRua(rua);
 
-  // Salva no Firebase (funciona offline — sincroniza quando tiver internet)
+  const id  = Date.now();
+  const ent = { id, rua: ruaNorm, numero: numero||'S/N', taxa, ts: id, user: usuarioAtual };
+
+  // Salva no Firebase
   db.ref(`${pathUser(usuarioAtual)}/${id}`).set(ent);
 
-  // Atualiza cache local de endereços
-  const chave = rua.toLowerCase()+'|'+(numero||'S/N');
+  // Atualiza cache local
+  const chave = chaveEndereco(ruaNorm, numero||'S/N');
   if(!enderecoHistorico[chave]){
-    enderecoHistorico[chave] = { rua, numero: numero||'S/N', taxa, count: 1 };
+    enderecoHistorico[chave] = { rua: ruaNorm, numero: numero||'S/N', taxa, count: 1 };
   } else {
     enderecoHistorico[chave].count++;
     enderecoHistorico[chave].taxa = taxa;

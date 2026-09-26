@@ -111,37 +111,19 @@
   .input-group input::placeholder{color:rgba(148,163,184,0.3);}
   .taxa-preview{font-size:12px;font-weight:600;color:var(--green);flex:1;padding-left:6px;align-self:center;}
   /* AUTOCOMPLETE */
-  .autocomplete-wrap{position:static;flex:1;}
-  .autocomplete-outer{position:relative;}
-  .autocomplete-list{
-    position:fixed;
-    left:16px;right:16px;
-    background:rgba(8,13,30,0.98);
-    backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
-    border:1px solid rgba(96,165,250,0.35);
-    border-radius:var(--radius-sm);
-    z-index:9999;
-    max-height:240px;
-    overflow-y:auto;
-    overflow-x:hidden;
-    box-shadow:0 12px 40px rgba(0,0,0,0.7);
-    display:none;
-  }
-  .autocomplete-list.show{display:block;}
-  .autocomplete-list::-webkit-scrollbar{display:none;}
+  #autocompleteList::-webkit-scrollbar{display:none;}
   .autocomplete-item{
-    padding:12px 14px;
+    padding:12px 16px;
     cursor:pointer;
-    border-bottom:1px solid rgba(255,255,255,0.05);
-    transition:background 0.12s;
+    border-bottom:1px solid rgba(255,255,255,0.06);
     -webkit-tap-highlight-color:transparent;
   }
   .autocomplete-item:last-child{border-bottom:none;}
   .autocomplete-item:active{background:rgba(96,165,250,0.15);}
-  .autocomplete-item-rua{font-size:14px;font-weight:600;color:var(--text);}
-  .autocomplete-item-info{font-size:11px;font-weight:500;color:var(--text2);margin-top:3px;}
-  .autocomplete-item-taxa{font-size:12px;font-weight:700;color:var(--green);}
-  .autocomplete-highlight{color:var(--accent);font-weight:800;}
+  .ac-rua{font-size:14px;font-weight:600;color:#f0f4ff;}
+  .ac-info{font-size:11px;font-weight:500;color:#94a3b8;margin-top:3px;}
+  .ac-taxa{font-size:12px;font-weight:700;color:#34d399;}
+  .ac-hl{color:#60a5fa;font-weight:800;}
 
   .btn-add{background:linear-gradient(135deg,#3b6ef0,#818cf8);color:#fff;border:none;
     border-radius:var(--radius-sm);padding:12px 16px;font-size:14px;font-weight:800;
@@ -367,21 +349,15 @@
     <div class="form-card">
       <div class="form-label">Nova entrega</div>
       <div class="input-row">
-        <div class="autocomplete-wrap">
-          <div class="autocomplete-outer">
-            <div class="input-group">
-              <label>Rua / Avenida</label>
-              <input type="text" id="inputRua" placeholder="Ex: Rua das Flores" autocomplete="off" />
-            </div>
-          </div>
+        <div class="input-group">
+          <label>Rua / Avenida</label>
+          <input type="text" id="inputRua" placeholder="Ex: Rua das Flores" autocomplete="off" />
         </div>
         <div class="input-group num-group">
           <label>Número</label>
           <input type="text" id="inputNumero" placeholder="123" autocomplete="off" inputmode="numeric" />
         </div>
       </div>
-      <!-- Lista de sugestões fora do flow -->
-      <div class="autocomplete-list" id="autocompleteList"></div>
       <div class="input-row" style="align-items:flex-end;">
         <div class="input-group taxa-group">
           <label>Taxa (R$)</label>
@@ -410,6 +386,21 @@
     </div>
   </div>
 </div>
+
+<!-- AUTOCOMPLETE — flutua por cima de tudo -->
+<div id="autocompleteList" style="
+  display:none;
+  position:fixed;
+  left:16px;right:16px;
+  background:rgba(8,13,30,0.97);
+  border:1px solid rgba(96,165,250,0.35);
+  border-radius:14px;
+  z-index:9999;
+  max-height:250px;
+  overflow-y:auto;
+  box-shadow:0 12px 40px rgba(0,0,0,0.7);
+  overscroll-behavior:contain;
+"></div>
 
 <!-- ADM -->
 <div class="page" id="pageAdm">
@@ -709,45 +700,40 @@ function carregarHistoricoEnderecos(){
 }
 
 function mostrarSugestoes(texto){
-  const lista = document.getElementById('autocompleteList');
-  if(!texto || texto.length < 2){ lista.classList.remove('show'); return; }
+  const el = document.getElementById('autocompleteList');
+  if(!texto || texto.length < 2){ el.style.display='none'; return; }
 
   const q = texto.toLowerCase();
-
   const resultados = Object.values(enderecoHistorico)
     .filter(e => e.rua && e.rua.toLowerCase().includes(q))
-    .sort((a,b) => {
-      const ruaA = a.rua.toLowerCase();
-      const ruaB = b.rua.toLowerCase();
-      if(ruaA !== ruaB) return ruaA.localeCompare(ruaB);
-      return (parseInt(a.numero)||0) - (parseInt(b.numero)||0);
+    .sort((a,b)=>{
+      const ra=a.rua.toLowerCase(), rb=b.rua.toLowerCase();
+      if(ra!==rb) return ra.localeCompare(rb);
+      return (parseInt(a.numero)||0)-(parseInt(b.numero)||0);
     })
-    .slice(0, 10);
+    .slice(0,10);
 
-  if(resultados.length === 0){ lista.classList.remove('show'); return; }
+  if(resultados.length===0){ el.style.display='none'; return; }
 
-  // Posiciona a lista logo abaixo do input de rua
-  const inputEl = document.getElementById('inputRua');
-  const rect = inputEl.getBoundingClientRect();
-  lista.style.top  = (rect.bottom + 6) + 'px';
-  lista.style.left = '16px';
-  lista.style.right = '16px';
+  // Posiciona logo abaixo do campo de rua
+  const input = document.getElementById('inputRua');
+  const rect  = input.getBoundingClientRect();
+  el.style.top = (rect.bottom + 6) + 'px';
 
-  lista.innerHTML = resultados.map(e=>{
-    const ruaHighlight = e.rua.replace(
-      new RegExp(`(${texto.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'),
-      '<span class="autocomplete-highlight">$1</span>'
-    );
-    return `<div class="autocomplete-item" ontouchstart="" onclick="selecionarEndereco('${e.rua.replace(/'/g,"\\'")}','${e.numero}',${e.taxa})">
-      <div class="autocomplete-item-rua">${ruaHighlight}, nº ${e.numero}</div>
-      <div class="autocomplete-item-info">
-        Taxa: <span class="autocomplete-item-taxa">${fmt(e.taxa)}</span>
-        &nbsp;·&nbsp; ${e.count}x entregue
-      </div>
+  const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  el.innerHTML = resultados.map(e=>{
+    const hl = e.rua.replace(new RegExp(`(${esc(texto)})`, 'gi'),
+      '<span class="ac-hl">$1</span>');
+    const ruaSafe = e.rua.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    return `<div class="autocomplete-item"
+      ontouchend="selecionarEndereco('${ruaSafe}','${e.numero}',${e.taxa})"
+      onclick="selecionarEndereco('${ruaSafe}','${e.numero}',${e.taxa})">
+      <div class="ac-rua">${hl}, nº ${e.numero}</div>
+      <div class="ac-info">Taxa: <span class="ac-taxa">${fmt(e.taxa)}</span> · ${e.count}x entregue</div>
     </div>`;
   }).join('');
 
-  lista.classList.add('show');
+  el.style.display = 'block';
 }
 
 function selecionarEndereco(rua, numero, taxa){
@@ -755,14 +741,12 @@ function selecionarEndereco(rua, numero, taxa){
   document.getElementById('inputNumero').value = numero;
   document.getElementById('inputTaxa').value   = taxa;
   document.getElementById('taxaPreview').textContent = '→ ' + fmt(taxa);
-  document.getElementById('autocompleteList').classList.remove('show');
+  document.getElementById('autocompleteList').style.display = 'none';
   document.getElementById('inputTaxa').focus();
 }
 
-function fecharAutocomplete(){
-  setTimeout(()=>{
-    document.getElementById('autocompleteList').classList.remove('show');
-  }, 200);
+function fecharSugestoes(){
+  setTimeout(()=>{ document.getElementById('autocompleteList').style.display='none'; }, 150);
 }
 
 document.getElementById('inputTaxa').addEventListener('input', function(){
@@ -770,11 +754,11 @@ document.getElementById('inputTaxa').addEventListener('input', function(){
   document.getElementById('taxaPreview').textContent = (!isNaN(v)&&v>0) ? '→ '+fmt(v) : '';
 });
 
-// Listener do inputRua com autocomplete
+// Listeners do inputRua
 document.getElementById('inputRua').addEventListener('input', function(){
   mostrarSugestoes(this.value.trim());
 });
-document.getElementById('inputRua').addEventListener('blur', fecharAutocomplete);
+document.getElementById('inputRua').addEventListener('blur', fecharSugestoes);
 document.getElementById('inputRua').addEventListener('focus', function(){
   if(this.value.trim().length >= 2) mostrarSugestoes(this.value.trim());
 });

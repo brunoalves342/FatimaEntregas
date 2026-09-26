@@ -677,25 +677,37 @@ function atualizarStats(){
 // ══════════════════════════════════════════
 //  AUTOCOMPLETE DE ENDEREÇOS
 // ══════════════════════════════════════════
-let enderecoHistorico = {}; // { "rua|numero": { rua, numero, taxa, count } }
+let enderecoHistorico = {};
 
 // Carrega histórico de todos os dias do Firebase pra montar autocomplete
 function carregarHistoricoEnderecos(){
-  db.ref(`entregas/${usuarioAtual}`).once('value', snap=>{
-    const allDias = snap.val()||{};
-    enderecoHistorico = {};
-    Object.values(allDias).forEach(dia=>{
-      Object.values(dia).forEach(e=>{
-        const chave = (e.rua||'').toLowerCase()+'|'+(e.numero||'');
-        if(!enderecoHistorico[chave]){
-          enderecoHistorico[chave] = { rua: e.rua, numero: e.numero, taxa: e.taxa, count: 1 };
-        } else {
-          enderecoHistorico[chave].count++;
-          // Atualiza com a taxa mais recente
-          enderecoHistorico[chave].taxa = e.taxa;
-        }
+  enderecoHistorico = {};
+
+  // Busca todas as entregas de todos os usuários pra ter histórico completo de endereços
+  db.ref('entregas').once('value', snap=>{
+    const allUsers = snap.val()||{};
+    Object.values(allUsers).forEach(userDias=>{
+      if(!userDias || typeof userDias !== 'object') return;
+      Object.values(userDias).forEach(dia=>{
+        if(!dia || typeof dia !== 'object') return;
+        Object.values(dia).forEach(e=>{
+          if(!e || !e.rua) return;
+          const chave = e.rua.trim().toLowerCase()+'|'+(e.numero||'').trim();
+          if(!enderecoHistorico[chave]){
+            enderecoHistorico[chave] = {
+              rua: e.rua.trim(),
+              numero: (e.numero||'S/N').trim(),
+              taxa: e.taxa||0,
+              count: 1
+            };
+          } else {
+            enderecoHistorico[chave].count++;
+            enderecoHistorico[chave].taxa = e.taxa||enderecoHistorico[chave].taxa;
+          }
+        });
       });
     });
+    console.log('Histórico carregado:', Object.keys(enderecoHistorico).length, 'endereços');
   });
 }
 

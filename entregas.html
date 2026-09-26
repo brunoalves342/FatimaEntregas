@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Fatima Entregas</title>
+<title>RouteX</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -181,8 +181,8 @@
   .modal-overlay.show{opacity:1;pointer-events:all;}
   .modal-sheet{background:rgba(8,13,30,0.96);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);
     border:1px solid var(--glass-border);border-bottom:none;border-radius:26px 26px 0 0;
-    padding:16px 20px 44px;width:100%;
-    height:82vh;
+    padding:16px 20px 24px;width:100%;
+    height:85vh;
     display:flex;flex-direction:column;
     transform:translateY(100%);
     transition:transform 0.28s cubic-bezier(0.4,0,0.2,1);box-shadow:0 -8px 40px rgba(0,0,0,0.5);}
@@ -201,13 +201,15 @@
     display:flex;flex-direction:column;gap:7px;
     flex:1;
     min-height:0;
+    max-height:calc(10 * 69px);
     padding-bottom:8px;}
   .hist-scroll::-webkit-scrollbar{display:none;}
   .hist-empty{text-align:center;padding:28px 20px;font-size:13px;font-weight:500;color:var(--text2);}
   .hist-empty .ei{font-size:34px;margin-bottom:10px;opacity:0.4;}
   .hist-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
     border-radius:var(--radius-sm);padding:12px 14px;display:flex;align-items:center;gap:11px;
-    cursor:pointer;transition:background 0.15s,transform 0.1s;position:relative;overflow:hidden;}
+    cursor:pointer;transition:background 0.15s,transform 0.1s;position:relative;overflow:hidden;
+    min-height:62px;flex-shrink:0;}
   .hist-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
     background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent);}
   .hist-card:active{background:rgba(255,255,255,0.07);transform:scale(0.99);}
@@ -215,11 +217,11 @@
     border:1px solid rgba(96,165,250,0.18);color:var(--accent);border-radius:10px;
     width:33px;height:33px;display:flex;align-items:center;justify-content:center;
     font-size:12px;font-weight:800;flex-shrink:0;}
-  .hc-info{flex:1;min-width:0;}
+  .hc-info{flex:1;min-width:0;overflow:hidden;}
   .hc-addr{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .hc-time{font-size:11px;font-weight:500;color:var(--text2);margin-top:2px;}
-  .hc-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;}
-  .hc-taxa{font-size:14px;font-weight:800;color:var(--green);}
+  .hc-time{font-size:11px;font-weight:500;color:var(--text2);margin-top:2px;white-space:nowrap;}
+  .hc-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;min-width:70px;}
+  .hc-taxa{font-size:14px;font-weight:800;color:var(--green);white-space:nowrap;}
   .hc-arr{font-size:13px;color:rgba(148,163,184,0.25);}
 
   /* DETALHE */
@@ -277,8 +279,8 @@
 <div class="page active" id="pageLogin">
   <div class="login-wrap">
     <div class="login-logo">🛵</div>
-    <div class="login-title">Fatima Entregas</div>
-    <div class="login-sub">Faça login para continuar</div>
+    <div class="login-title">RouteX</div>
+    <div class="login-sub">Gestão de entregas profissional</div>
     <div class="login-card">
       <div>
         <div class="login-label">Nome</div>
@@ -303,7 +305,7 @@
   <div class="header">
     <div class="header-row">
       <div class="logo">
-        <div class="logo-icon">🛵</div>
+        <div class="logo-icon">🗺️</div>
         <div class="logo-text">
           <h1 id="appNomeHeader">Entregador</h1>
           <span id="appDataHeader"></span>

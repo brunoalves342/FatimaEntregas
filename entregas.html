@@ -422,45 +422,12 @@
       </div>
       <div class="header-right">
         <button class="btn-adm" onclick="renderAdm()" title="Atualizar">🔄</button>
-        <button class="btn-adm" id="btnAbrev" onclick="abrirAbrev()" style="display:none;">✏️ Ruas</button>
         <button class="btn-adm" id="btnVoltarAdm" onclick="voltarApp()">← Voltar</button>
         <button class="btn-sair" onclick="sair()">Sair</button>
       </div>
     </div>
   </div>
   <div class="adm-scroll" id="admScroll"></div>
-</div>
-
-<!-- MODAL ABREVIAÇÕES -->
-<div class="modal-overlay" id="modalAbrev" onclick="fecharAbrev(event)">
-  <div class="modal-sheet" style="max-height:85vh;">
-    <div class="sheet-handle"></div>
-    <div class="hist-header">
-      <div class="hist-title">✏️ Abreviações</div>
-      <span class="hist-count" id="abrevCount">0</span>
-    </div>
-
-    <!-- Form nova abreviação -->
-    <div style="display:flex;gap:8px;margin-bottom:14px;flex-shrink:0;">
-      <input type="text" id="inputAbrev" placeholder="Ex: n.s.guia"
-        style="flex:1;background:rgba(0,0,0,0.25);border:1.5px solid rgba(255,255,255,0.1);
-        border-radius:12px;padding:11px 14px;color:#f0f4ff;font-size:14px;font-weight:500;
-        font-family:'Inter',sans-serif;outline:none;" />
-      <input type="text" id="inputAbrevCompleto" placeholder="Ex: Rua Nossa Senhora da Guia"
-        style="flex:2;background:rgba(0,0,0,0.25);border:1.5px solid rgba(255,255,255,0.1);
-        border-radius:12px;padding:11px 14px;color:#f0f4ff;font-size:14px;font-weight:500;
-        font-family:'Inter',sans-serif;outline:none;" />
-      <button onclick="salvarAbrev()"
-        style="background:linear-gradient(135deg,#3b6ef0,#818cf8);color:#fff;border:none;
-        border-radius:12px;padding:11px 16px;font-size:14px;font-weight:800;
-        font-family:'Inter',sans-serif;cursor:pointer;white-space:nowrap;">
-        ＋
-      </button>
-    </div>
-
-    <!-- Lista de abreviações -->
-    <div class="hist-scroll" id="abrevList"></div>
-  </div>
 </div>
 
 <!-- TOAST -->
@@ -705,8 +672,8 @@ document.getElementById('loginSenha').addEventListener('keydown', e=>{ if(e.key=
 function entrarApp(){
   const tipo = USUARIOS[usuarioAtual].tipo;
 
-  // Supervisor vai direto pro painel ADM (somente leitura)
-  if(tipo === 'supervisor'){
+  // ADM e Supervisor vão direto pro painel
+  if(tipo === 'adm' || tipo === 'supervisor'){
     mostrarPagina('pageAdm');
     document.getElementById('admDataHeader').textContent = fmtData(hoje());
     renderAdm();
@@ -720,7 +687,6 @@ function entrarApp(){
   setSyncStatus('syncing', 'Conectando...');
   escutarEntregas();
   carregarHistoricoEnderecos();
-  carregarAbreviacoes();
 }
 
 function sair(){
@@ -778,87 +744,6 @@ function atualizarStats(){
   const soma = entregasLocal.reduce((s,e)=>s+e.taxa,0);
   document.getElementById('totalEntregas').textContent = entregasLocal.length;
   document.getElementById('totalTaxas').textContent    = fmt(soma);
-}
-
-// ══════════════════════════════════════════
-//  ABREVIAÇÕES DE RUAS
-// ══════════════════════════════════════════
-let dicionarioAbrev = {}; // { "n.s.guia": "Rua Nossa Senhora da Guia" }
-
-// Carrega abreviações do Firebase
-function carregarAbreviacoes(){
-  db.ref('abreviacoes').once('value', snap=>{
-    dicionarioAbrev = snap.val() || {};
-  });
-}
-
-// Expande abreviação se existir
-function expandirAbrev(texto){
-  const chave = texto.trim().toLowerCase();
-  return dicionarioAbrev[chave] || texto;
-}
-
-// Abre modal de abreviações
-function abrirAbrev(){
-  renderAbrevList();
-  document.getElementById('modalAbrev').classList.add('show');
-}
-
-function fecharAbrev(ev){
-  if(!ev || ev.target === document.getElementById('modalAbrev'))
-    document.getElementById('modalAbrev').classList.remove('show');
-}
-
-function renderAbrevList(){
-  const lista = Object.entries(dicionarioAbrev);
-  document.getElementById('abrevCount').textContent = lista.length + (lista.length===1?' item':' itens');
-  const el = document.getElementById('abrevList');
-
-  if(lista.length === 0){
-    el.innerHTML = `<div class="hist-empty"><div class="ei">✏️</div><p>Nenhuma abreviação cadastrada ainda.</p></div>`;
-    return;
-  }
-
-  el.innerHTML = lista.map(([abrev, completo])=>`
-    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
-      border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-      <div style="flex:1;">
-        <div style="font-size:13px;font-weight:700;color:#60a5fa;">${abrev}</div>
-        <div style="font-size:12px;font-weight:500;color:#94a3b8;margin-top:2px;">→ ${completo}</div>
-      </div>
-      <button onclick="removerAbrev('${abrev}')"
-        style="background:rgba(248,113,113,0.1);color:#f87171;border:1px solid rgba(248,113,113,0.2);
-        border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;
-        font-family:'Inter',sans-serif;cursor:pointer;">
-        🗑
-      </button>
-    </div>
-  `).join('');
-}
-
-function salvarAbrev(){
-  const abrev    = document.getElementById('inputAbrev').value.trim().toLowerCase();
-  const completo = document.getElementById('inputAbrevCompleto').value.trim();
-
-  if(!abrev || !completo){ toast('⚠️ Preencha os dois campos!'); return; }
-
-  dicionarioAbrev[abrev] = completo;
-  db.ref(`abreviacoes/${abrev.replace(/\./g,'_')}`).set(completo).then(()=>{
-    document.getElementById('inputAbrev').value = '';
-    document.getElementById('inputAbrevCompleto').value = '';
-    renderAbrevList();
-    toast('✓ Abreviação salva!');
-    // Recarrega pra garantir sync
-    carregarAbreviacoes();
-  });
-}
-
-function removerAbrev(abrev){
-  delete dicionarioAbrev[abrev];
-  db.ref(`abreviacoes/${abrev.replace(/\./g,'_')}`).remove().then(()=>{
-    renderAbrevList();
-    toast('Abreviação removida');
-  });
 }
 
 // ══════════════════════════════════════════
@@ -976,14 +861,7 @@ document.getElementById('inputTaxa').addEventListener('input', function(){
 
 // Listeners do inputRua
 document.getElementById('inputRua').addEventListener('input', function(){
-  // Verifica se é uma abreviação conhecida
-  const expandido = expandirAbrev(this.value.trim());
-  if(expandido !== this.value.trim()){
-    this.value = expandido;
-    mostrarSugestoes(expandido);
-  } else {
-    mostrarSugestoes(this.value.trim());
-  }
+  mostrarSugestoes(this.value.trim());
 });
 document.getElementById('inputRua').addEventListener('blur', fecharSugestoes);
 document.getElementById('inputRua').addEventListener('focus', function(){
@@ -1354,7 +1232,6 @@ function renderAdm(){
   document.getElementById('admNomeHeader').textContent = tipo === 'supervisor' ? `👀 ${usuarioAtual}` : 'Painel ADM';
   document.getElementById('admDataHeader').textContent = fmtData(hoje());
   document.getElementById('btnVoltarAdm').style.display = tipo === 'supervisor' ? 'none' : '';
-  document.getElementById('btnAbrev').style.display = tipo === 'adm' ? '' : 'none';
 
   const scroll = document.getElementById('admScroll');
   const hora = d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')+':'+d.getSeconds().toString().padStart(2,'0');

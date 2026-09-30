@@ -526,9 +526,9 @@ const db = firebase.database();
 //  USUÁRIOS
 // ══════════════════════════════════════════
 const USUARIOS = {
-  'adm':   { senha:'adm123',   tipo:'adm',        emoji:'⚙️' },
-  'Bruno': { senha:'bruno123', tipo:'entregador',  emoji:'🛵' },
-  'Entregador2': { senha:'ent2', tipo:'entregador', emoji:'🛵' },
+  'adm':   { senha:'Macaco22',  tipo:'adm',        emoji:'⚙️' },
+  'Bruno': { senha:'Macaco22',  tipo:'entregador',  emoji:'🛵' },
+  'Jonathas': { senha:'ent2',   tipo:'entregador',  emoji:'🛵' },
   'Entregador3': { senha:'ent3', tipo:'entregador', emoji:'🛵' },
 };
 
@@ -601,9 +601,26 @@ function fazerLogin(){
   }
   err.textContent = '';
   usuarioAtual    = user;
+  // Salva sessão no localStorage pra não deslogar ao fechar o app
+  localStorage.setItem('routex_session', JSON.stringify({ user, ts: Date.now() }));
   document.getElementById('loginNome').value  = '';
   document.getElementById('loginSenha').value = '';
   entrarApp();
+}
+
+// Tenta restaurar sessão salva ao abrir o app
+function restaurarSessao(){
+  try {
+    const raw = localStorage.getItem('routex_session');
+    if(!raw) return false;
+    const { user } = JSON.parse(raw);
+    if(user && USUARIOS[user]){
+      usuarioAtual = user;
+      entrarApp();
+      return true;
+    }
+  } catch(e){}
+  return false;
 }
 
 document.getElementById('loginNome').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('loginSenha').focus(); });
@@ -622,6 +639,8 @@ function entrarApp(){
 function sair(){
   if(unsubscribe){ unsubscribe(); unsubscribe=null; }
   if(window._admInterval){ clearInterval(window._admInterval); }
+  // Remove sessão salva ao sair manualmente
+  localStorage.removeItem('routex_session');
   usuarioAtual=null; idAtual=null; entAtual=null; entregasLocal=[];
   mostrarPagina('pageLogin');
 }
@@ -1259,6 +1278,9 @@ function toast(msg){
   t.textContent=msg; t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),2500);
 }
+
+// Tenta restaurar sessão ao carregar o app
+restaurarSessao();
 </script>
 </body>
 </html>

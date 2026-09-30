@@ -1192,7 +1192,7 @@ function abrirDetalhe(id, user, data){
     // Controla edição de endereço
     const tipo        = USUARIOS[usuarioAtual].tipo;
     const ehHoje      = data === hoje();
-    const podeEditEnd = tipo === 'adm' || (tipo === 'entregador' && ehHoje && user === usuarioAtual);
+    const podeEditEnd = tipo === 'adm' || (tipo === 'entregador' && ehHoje);
 
     const addrEl = document.getElementById('detAddr');
     addrEl.style.cursor = podeEditEnd ? 'pointer' : 'default';
@@ -1228,13 +1228,15 @@ function fecharDetalhe(ev){
 
 // ── Editar endereço (só ADM) ──
 function editarEndereco(){
-  const tipo = USUARIOS[usuarioAtual].tipo;
+  const tipo   = USUARIOS[usuarioAtual].tipo;
   const ehHoje = entAtual._data === hoje();
 
-  // ADM pode editar qualquer dia
-  // Entregador só pode editar entregas de hoje e somente as suas
+  // Supervisor nunca edita
   if(tipo === 'supervisor') return;
-  if(tipo === 'entregador' && (!ehHoje || entAtual._user !== usuarioAtual)) return;
+
+  // ADM edita qualquer dia
+  // Entregador edita só as suas entregas de hoje
+  if(tipo === 'entregador' && !ehHoje) return;
 
   document.getElementById('inputEditRua').value    = entAtual.rua || '';
   document.getElementById('inputEditNumero').value = entAtual.numero || '';

@@ -489,10 +489,10 @@
       </div>
     </div>
     <div class="det-sub" id="detSub"></div>
-    <div class="det-taxa-box" onclick="editarTaxa()" id="detTaxaBox">
+    <div class="det-taxa-box" id="detTaxaBox">
       <div class="det-taxa-icon">💵</div>
       <div style="flex:1;">
-        <div class="det-taxa-label">Taxa <span style="font-size:9px;color:rgba(96,165,250,0.6);margin-left:4px;">✏️ editar</span></div>
+        <div class="det-taxa-label" id="detTaxaLabel">Taxa da entrega</div>
         <div class="det-taxa-val" id="detTaxa"></div>
         <div id="detTaxaEdit" style="display:none;margin-top:6px;">
           <div style="display:flex;gap:8px;align-items:center;">
@@ -585,6 +585,17 @@ function fmtHora(ts){
 function hoje(){
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// Retorna o primeiro dia do mês atual (ex: "2026-09-01")
+function inicioMesAtual(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`;
+}
+
+// Filtra dias que estão dentro do mês atual
+function dentrodoMes(dia){
+  return dia >= inicioMesAtual();
 }
 function fmtData(str){
   const [y,m,d] = str.split('-');
@@ -981,7 +992,7 @@ function renderDiasAnteriores(){
 
   db.ref(`entregas/${usuarioAtual}`).once('value', snap=>{
     const allDias = snap.val()||{};
-    const diasAnt = Object.keys(allDias).sort().reverse().filter(d=>d!==hoje());
+    const diasAnt = Object.keys(allDias).sort().reverse().filter(d=>d!==hoje() && dentrodoMes(d));
 
     document.getElementById('histCount').textContent = diasAnt.length + (diasAnt.length===1?' dia':' dias');
 
@@ -1085,6 +1096,16 @@ function abrirDetalhe(id, user, data){
     document.getElementById('detDistBox').style.display = 'none';
     fecharEditTaxa();
     cancelarEditEndereco();
+
+    const podeEditar = tipo !== 'supervisor';
+
+    // Taxa — clicável só pra quem pode editar
+    const taxaBox = document.getElementById('detTaxaBox');
+    taxaBox.onclick = podeEditar ? editarTaxa : null;
+    taxaBox.style.cursor = podeEditar ? 'pointer' : 'default';
+    document.getElementById('detTaxaLabel').innerHTML = podeEditar
+      ? 'Taxa <span style="font-size:9px;color:rgba(96,165,250,0.6);margin-left:4px;">✏️ editar</span>'
+      : 'Taxa da entrega';
 
     const podeExcluir = tipo==='adm' || user===usuarioAtual;
     document.getElementById('btnExcluir').style.display = podeExcluir ? '' : 'none';
@@ -1295,7 +1316,7 @@ function renderAdmComDados(dadosEnt, entregadores, scroll, hora){
       });
     });
 
-    const diasAnt = [...dias].sort().reverse().filter(d=>d!==hoje_);
+    const diasAnt = [...dias].sort().reverse().filter(d=>d!==hoje_ && dentrodoMes(d));
 
     if(diasAnt.length>0){
       html += `<div class="adm-section-title">Dias Anteriores</div>`;

@@ -1387,7 +1387,12 @@ function verRelDia(dia){
         <span class="rel-ent-name">${user}</span>
         <span class="rel-ent-badge">${lista.length} entregas</span></div>`;
       lista.forEach((e,i)=>{
-        html+=`<div class="rel-item">
+        // Descobre qual alias tem esse id
+        let aliasCorreto = aliases[0];
+        aliases.forEach(alias=>{
+          if(allData[alias]&&allData[alias][dia]&&allData[alias][dia][e.id]) aliasCorreto = alias;
+        });
+        html+=`<div class="rel-item" onclick="abrirDetalhe('${e.id}','${aliasCorreto}','${dia}');fecharRelDia();" style="cursor:pointer;">
           <div><div style="font-size:12px;font-weight:600;color:var(--text);">${i+1}. ${e.rua}, nº ${e.numero}</div>
           <div style="font-size:11px;color:var(--text2);margin-top:2px;">🕐 ${fmtHora(e.ts)}</div></div>
           <div class="rel-item-taxa">${fmt(e.taxa)}</div></div>`;

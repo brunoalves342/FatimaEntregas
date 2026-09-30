@@ -497,7 +497,30 @@
   <div class="modal-sheet">
     <div class="sheet-handle"></div>
     <div class="det-badge" id="detBadge">🚀 Entrega #1</div>
-    <div class="det-addr" id="detAddr"></div>
+    <div class="det-addr" id="detAddr" style="cursor:pointer;" onclick="editarEndereco()"></div>
+    <!-- Edição de endereço (visível só pro ADM) -->
+    <div id="detEnderecoEdit" style="display:none;margin-bottom:4px;">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">
+        <input type="text" id="inputEditRua" placeholder="Nome da rua"
+          style="flex:1;background:rgba(0,0,0,0.3);border:1.5px solid rgba(96,165,250,0.5);border-radius:10px;
+          padding:9px 12px;color:#f0f4ff;font-size:14px;font-weight:600;font-family:'Inter',sans-serif;
+          outline:none;-webkit-appearance:none;" />
+        <input type="text" id="inputEditNumero" placeholder="Nº"
+          style="width:70px;background:rgba(0,0,0,0.3);border:1.5px solid rgba(96,165,250,0.5);border-radius:10px;
+          padding:9px 10px;color:#f0f4ff;font-size:14px;font-weight:600;font-family:'Inter',sans-serif;
+          outline:none;-webkit-appearance:none;" />
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="salvarEndereco()"
+          style="flex:1;background:linear-gradient(135deg,#3b6ef0,#818cf8);color:#fff;border:none;
+          border-radius:10px;padding:9px;font-size:13px;font-weight:800;
+          font-family:'Inter',sans-serif;cursor:pointer;">✓ Salvar</button>
+        <button onclick="cancelarEditEndereco()"
+          style="background:rgba(255,255,255,0.06);color:var(--text2);border:1px solid rgba(255,255,255,0.1);
+          border-radius:10px;padding:9px 12px;font-size:13px;font-weight:700;
+          font-family:'Inter',sans-serif;cursor:pointer;">✕</button>
+      </div>
+    </div>
     <div class="det-sub" id="detSub"></div>
     <div class="det-taxa-box" onclick="editarTaxa()" id="detTaxaBox">
       <div class="det-taxa-icon">💵</div>
@@ -1165,13 +1188,27 @@ function abrirDetalhe(id, user, data){
     const num   = lista.findIndex(x=>String(x.id)===String(id))+1 || '?';
 
     document.getElementById('detBadge').textContent = '🚀 Entrega #'+num;
-    document.getElementById('detAddr').textContent  = e.rua;
-    document.getElementById('detSub').textContent   = 'Número '+e.numero+' · '+fmtHora(e.ts);
+
+    // Controla edição de endereço
+    const tipo        = USUARIOS[usuarioAtual].tipo;
+    const ehHoje      = data === hoje();
+    const podeEditEnd = tipo === 'adm' || (tipo === 'entregador' && ehHoje && user === usuarioAtual);
+
+    const addrEl = document.getElementById('detAddr');
+    addrEl.style.cursor = podeEditEnd ? 'pointer' : 'default';
+    if(podeEditEnd){
+      addrEl.innerHTML = e.rua + ' <span style="font-size:11px;color:rgba(96,165,250,0.5);">✏️</span>';
+    } else {
+      addrEl.textContent = e.rua;
+    }
+
+    document.getElementById('detSub').textContent   = 'Número '+(e.numero||'S/N')+' · '+fmtHora(e.ts);
     document.getElementById('detTaxa').textContent  = fmt(e.taxa);
     document.getElementById('detDistBox').style.display = 'none';
     fecharEditTaxa();
+    cancelarEditEndereco();
 
-    const podeExcluir = USUARIOS[usuarioAtual].tipo==='adm' || user===usuarioAtual;
+    const podeExcluir = tipo==='adm' || user===usuarioAtual;
     document.getElementById('btnExcluir').style.display = podeExcluir ? '' : 'none';
 
     document.getElementById('modalDetalhe').classList.add('show');
@@ -1184,8 +1221,51 @@ function fecharDetalhe(ev){
     document.getElementById('modalDetalhe').classList.remove('show');
     document.getElementById('detDistBox').style.display='none';
     fecharEditTaxa();
+    cancelarEditEndereco();
     idAtual=null; entAtual=null;
   }
+}
+
+// ── Editar endereço (só ADM) ──
+function editarEndereco(){
+  const tipo = USUARIOS[usuarioAtual].tipo;
+  const ehHoje = entAtual._data === hoje();
+
+  // ADM pode editar qualquer dia
+  // Entregador só pode editar entregas de hoje e somente as suas
+  if(tipo === 'supervisor') return;
+  if(tipo === 'entregador' && (!ehHoje || entAtual._user !== usuarioAtual)) return;
+
+  document.getElementById('inputEditRua').value    = entAtual.rua || '';
+  document.getElementById('inputEditNumero').value = entAtual.numero || '';
+  document.getElementById('detAddr').style.display         = 'none';
+  document.getElementById('detEnderecoEdit').style.display = 'block';
+  document.getElementById('inputEditRua').focus();
+}
+
+function salvarEndereco(){
+  const novaRua    = document.getElementById('inputEditRua').value.trim();
+  const novoNumero = document.getElementById('inputEditNumero').value.trim();
+  if(!novaRua){ toast('⚠️ Digite o nome da rua!'); return; }
+
+  const user = entAtual._user;
+  const data = entAtual._data;
+  db.ref(`entregas/${user}/${data}/${idAtual}/rua`).set(novaRua);
+  if(novoNumero) db.ref(`entregas/${user}/${data}/${idAtual}/numero`).set(novoNumero);
+
+  // Atualiza visual
+  document.getElementById('detAddr').textContent = novaRua;
+  document.getElementById('detSub').textContent  = 'Número ' + (novoNumero || entAtual.numero) + ' · ' + fmtHora(entAtual.ts);
+  entAtual.rua    = novaRua;
+  entAtual.numero = novoNumero || entAtual.numero;
+
+  cancelarEditEndereco();
+  toast('✓ Endereço atualizado!');
+}
+
+function cancelarEditEndereco(){
+  document.getElementById('detEnderecoEdit').style.display = 'none';
+  document.getElementById('detAddr').style.display         = '';
 }
 
 // ── Editar taxa ──

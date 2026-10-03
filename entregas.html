@@ -422,12 +422,33 @@
       </div>
       <div class="header-right">
         <button class="btn-adm" onclick="renderAdm()" title="Atualizar">🔄</button>
+        <button class="btn-adm" onclick="abrirEnderecos()">📍 Endereços</button>
         <button class="btn-adm" id="btnVoltarAdm" onclick="voltarApp()">← Voltar</button>
         <button class="btn-sair" onclick="sair()">Sair</button>
       </div>
     </div>
   </div>
   <div class="adm-scroll" id="admScroll"></div>
+</div>
+
+<!-- MODAL ENDEREÇOS -->
+<div class="modal-overlay" id="modalEnderecos" onclick="fecharEnderecos(event)">
+  <div class="modal-sheet" style="height:85vh;">
+    <div class="sheet-handle"></div>
+    <div class="hist-header">
+      <div class="hist-title">📍 Endereços</div>
+      <span class="hist-count" id="endCount">0</span>
+    </div>
+    <!-- Busca -->
+    <div style="margin-bottom:12px;flex-shrink:0;">
+      <input type="text" id="inputBuscaEnd" placeholder="Buscar endereço..."
+        oninput="filtrarEnderecos(this.value)"
+        style="width:100%;background:rgba(0,0,0,0.25);border:1.5px solid rgba(255,255,255,0.1);
+        border-radius:12px;padding:11px 14px;color:#f0f4ff;font-size:14px;font-weight:500;
+        font-family:'Inter',sans-serif;outline:none;-webkit-appearance:none;" />
+    </div>
+    <div class="hist-scroll" id="endList"></div>
+  </div>
 </div>
 
 <!-- TOAST -->
@@ -815,13 +836,37 @@ function carregarHistoricoEnderecos(){
   });
 }
 
+// Expande abreviações comuns para busca
+function expandirParaBusca(texto){
+  return texto.trim().toLowerCase()
+    // prefixos de logradouro
+    .replace(/^av\.\s*/i,  'avenida ')
+    .replace(/^av\s+/i,    'avenida ')
+    .replace(/^r\.\s*/i,   'rua ')
+    .replace(/^al\.\s*/i,  'alameda ')
+    .replace(/^tv\.\s*/i,  'travessa ')
+    .replace(/^pça\.\s*/i, 'praça ')
+    // remove acentos pra comparação
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+
+// Remove acentos de string
+function semAcento(s){ return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+
 function mostrarSugestoes(texto){
   const el = document.getElementById('autocompleteList');
   if(!texto || texto.length < 2){ el.style.display='none'; return; }
 
-  const q = texto.toLowerCase();
+  const q        = expandirParaBusca(texto);
+  const qOrig    = texto.trim().toLowerCase();
+
   const resultados = Object.values(enderecoHistorico)
-    .filter(e => e.rua && e.rua.toLowerCase().includes(q))
+    .filter(e => {
+      if(!e.rua) return false;
+      const ruaSemAcento = semAcento(e.rua);
+      // busca pelo texto expandido OU pelo texto original
+      return ruaSemAcento.includes(q) || ruaSemAcento.includes(qOrig);
+    })
     .sort((a,b)=>{
       const ra=a.rua.toLowerCase(), rb=b.rua.toLowerCase();
       if(ra!==rb) return ra.localeCompare(rb);
@@ -1433,6 +1478,58 @@ function verRelDia(dia){
 function fecharRelDia(ev){
   if(!ev||ev.target===document.getElementById('modalRelDia'))
     document.getElementById('modalRelDia').classList.remove('show');
+}
+
+// ══════════════════════════════════════════
+//  LISTA DE ENDEREÇOS (ADM)
+// ══════════════════════════════════════════
+function abrirEnderecos(){
+  document.getElementById('inputBuscaEnd').value = '';
+  renderEnderecos('');
+  document.getElementById('modalEnderecos').classList.add('show');
+}
+
+function fecharEnderecos(ev){
+  if(!ev||ev.target===document.getElementById('modalEnderecos'))
+    document.getElementById('modalEnderecos').classList.remove('show');
+}
+
+function filtrarEnderecos(texto){
+  renderEnderecos(texto);
+}
+
+function renderEnderecos(filtro){
+  const todos = Object.values(enderecoHistorico)
+    .sort((a,b)=> a.rua.localeCompare(b.rua) || (parseInt(a.numero)||0)-(parseInt(b.numero)||0));
+
+  const q = semAcento(filtro.trim());
+  const filtrados = q.length > 0
+    ? todos.filter(e => semAcento(e.rua).includes(q) || (e.numero+'').includes(q))
+    : todos;
+
+  document.getElementById('endCount').textContent = filtrados.length + (filtrados.length===1?' endereço':' endereços');
+
+  const el = document.getElementById('endList');
+  if(filtrados.length===0){
+    el.innerHTML=`<div class="hist-empty"><div class="ei">📍</div><p>Nenhum endereço encontrado.</p></div>`;
+    return;
+  }
+
+  el.innerHTML = filtrados.map(e=>`
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);
+      border-radius:12px;padding:12px 14px;margin-bottom:6px;display:flex;align-items:center;gap:12px;">
+      <div style="width:32px;height:32px;background:rgba(96,165,250,0.12);border-radius:8px;
+        display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">📍</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;color:#f0f4ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          ${e.rua}, nº ${e.numero}
+        </div>
+        <div style="font-size:11px;font-weight:500;color:#94a3b8;margin-top:2px;">
+          ${e.count}x entregue · última taxa: ${fmt(e.taxa)}
+        </div>
+      </div>
+    </div>
+  `).join('');
 }
 
 // ══════════════════════════════════════════

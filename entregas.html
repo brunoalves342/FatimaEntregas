@@ -160,21 +160,16 @@
   .adm-scroll::-webkit-scrollbar{display:none;}
   .adm-section-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;}
 
-  /* CARDS ADM */
-  .adm-card{background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-    border:1px solid var(--glass-border);border-radius:var(--radius);
-    overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.25);}
-  .adm-card-header{display:flex;align-items:center;justify-content:space-between;
-    padding:16px;cursor:pointer;transition:background 0.15s;}
-  .adm-card-header:active{background:var(--glass-hover);}
-  .adm-card-title{display:flex;align-items:center;gap:12px;}
-  .adm-card-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;
-    justify-content:center;font-size:18px;flex-shrink:0;}
-  .adm-card-name{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-0.3px;}
-  .adm-card-sub{font-size:11px;font-weight:500;color:var(--text2);margin-top:2px;}
-  .adm-chevron{font-size:20px;color:var(--text2);transition:transform 0.2s;font-weight:300;}
-  .adm-chevron.open{transform:rotate(90deg);}
-  .adm-card-body{padding:0 16px 16px;border-top:1px solid var(--glass-border);}
+  /* ABAS ADM */
+  .adm-tabs{flex-shrink:0;display:grid;grid-template-columns:repeat(4,1fr);
+    background:rgba(0,0,0,0.2);border-bottom:1px solid var(--glass-border);}
+  .adm-tab{background:none;border:none;color:var(--text2);font-family:'Inter',sans-serif;
+    font-size:11px;font-weight:600;padding:10px 4px 8px;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    border-bottom:2px solid transparent;transition:all 0.15s;-webkit-tap-highlight-color:transparent;}
+  .adm-tab span{font-size:10px;font-weight:700;letter-spacing:0.3px;}
+  .adm-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+  .adm-tab:active{opacity:0.7;}
 
   /* PERFIL ITEM */
   .perfil-item{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);
@@ -451,6 +446,8 @@
 
 <!-- ADM -->
 <div class="page" id="pageAdm">
+
+  <!-- HEADER -->
   <div class="header">
     <div class="header-row">
       <div class="logo">
@@ -466,75 +463,44 @@
       </div>
     </div>
   </div>
+
+  <!-- ABAS DE NAVEGAÇÃO -->
+  <div class="adm-tabs">
+    <button class="adm-tab active" id="tab_dia"      onclick="trocarAbaAdm('dia')">🛵<span>Hoje</span></button>
+    <button class="adm-tab"        id="tab_historico" onclick="trocarAbaAdm('historico')">📋<span>Histórico</span></button>
+    <button class="adm-tab"        id="tab_enderecos" onclick="trocarAbaAdm('enderecos')">📍<span>Endereços</span></button>
+    <button class="adm-tab"        id="tab_perfis"    onclick="trocarAbaAdm('perfis')">👥<span>Perfis</span></button>
+  </div>
+
+  <!-- CONTEÚDO DAS ABAS -->
   <div class="adm-scroll" id="admScroll">
 
-    <!-- CARD 1: GESTÃO DE PERFIS -->
-    <div class="adm-card" id="cardPerfis">
-      <div class="adm-card-header">
-        <div class="adm-card-title">
-          <div class="adm-card-icon" style="background:rgba(251,191,36,0.15);">👥</div>
-          <div>
-            <div class="adm-card-name">Gestão de Perfis</div>
-            <div class="adm-card-sub">Editar senhas dos perfis</div>
-          </div>
-        </div>
-      </div>
-      <div class="adm-card-body">
-        <div id="listaPerfiis"></div>
-      </div>
+    <!-- ABA: HOJE -->
+    <div id="aba_dia">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;
+        letter-spacing:0.8px;margin-bottom:12px;" id="admDiaSub">Carregando...</div>
+      <div id="diaAdmList"></div>
     </div>
 
-    <!-- CARD 2: ENDEREÇOS CADASTRADOS -->
-    <div class="adm-card">
-      <div class="adm-card-header">
-        <div class="adm-card-title">
-          <div class="adm-card-icon" style="background:rgba(96,165,250,0.15);">📍</div>
-          <div>
-            <div class="adm-card-name">Endereços Cadastrados</div>
-            <div class="adm-card-sub" id="endSubtitle">Carregando...</div>
-          </div>
-        </div>
-      </div>
-      <div class="adm-card-body">
-        <input type="text" id="inputBuscaEndCard" placeholder="Buscar endereço..."
-          oninput="filtrarEnderecosCard(this.value)"
-          style="width:100%;background:rgba(0,0,0,0.25);border:1.5px solid rgba(255,255,255,0.1);
-          border-radius:10px;padding:10px 13px;color:#f0f4ff;font-size:13px;font-weight:500;
-          font-family:'Inter',sans-serif;outline:none;margin-bottom:10px;-webkit-appearance:none;" />
-        <div id="endListCard" style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;"></div>
-      </div>
+    <!-- ABA: HISTÓRICO -->
+    <div id="aba_historico" style="display:none;">
+      <div id="historicoAdmList"></div>
     </div>
 
-    <!-- CARD 3: HISTÓRICO DE ENTREGAS -->
-    <div class="adm-card">
-      <div class="adm-card-header">
-        <div class="adm-card-title">
-          <div class="adm-card-icon" style="background:rgba(52,211,153,0.15);">📋</div>
-          <div>
-            <div class="adm-card-name">Histórico de Entregas</div>
-            <div class="adm-card-sub">Dias anteriores do mês</div>
-          </div>
-        </div>
-      </div>
-      <div class="adm-card-body">
-        <div id="historicoAdmList"></div>
-      </div>
+    <!-- ABA: ENDEREÇOS -->
+    <div id="aba_enderecos" style="display:none;">
+      <input type="text" id="inputBuscaEndCard" placeholder="Buscar endereço..."
+        oninput="filtrarEnderecosCard(this.value)"
+        style="width:100%;background:rgba(0,0,0,0.25);border:1.5px solid rgba(255,255,255,0.1);
+        border-radius:10px;padding:10px 13px;color:#f0f4ff;font-size:13px;font-weight:500;
+        font-family:'Inter',sans-serif;outline:none;margin-bottom:10px;-webkit-appearance:none;" />
+      <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:10px;" id="endSubtitle"></div>
+      <div id="endListCard" style="display:flex;flex-direction:column;gap:8px;"></div>
     </div>
 
-    <!-- CARD 4: ENTREGADORES DO DIA -->
-    <div class="adm-card">
-      <div class="adm-card-header">
-        <div class="adm-card-title">
-          <div class="adm-card-icon" style="background:rgba(129,140,248,0.15);">🛵</div>
-          <div>
-            <div class="adm-card-name">Entregadores de Hoje</div>
-            <div class="adm-card-sub" id="admDiaSub">Carregando...</div>
-          </div>
-        </div>
-      </div>
-      <div class="adm-card-body">
-        <div id="diaAdmList"></div>
-      </div>
+    <!-- ABA: PERFIS -->
+    <div id="aba_perfis" style="display:none;">
+      <div id="listaPerfiis"></div>
     </div>
 
   </div>
@@ -1405,17 +1371,43 @@ function renderAdm(){
   const tipo = USUARIOS[usuarioAtual].tipo;
   document.getElementById('admNomeHeader').textContent = tipo === 'supervisor' ? `👀 ${usuarioAtual}` : 'Painel ADM';
   document.getElementById('admDataHeader').textContent = fmtData(hoje());
-  const cardPerfis = document.getElementById('cardPerfis');
-  if(cardPerfis) cardPerfis.style.display = tipo === 'adm' ? '' : 'none';
-  renderPerfiis();
-  renderDiaCard();
-  renderHistoricoCard();
-  // Carrega endereços automaticamente
+
+  // Esconde aba de perfis pro supervisor
+  const tabPerfis = document.getElementById('tab_perfis');
+  if(tabPerfis) tabPerfis.style.display = tipo === 'adm' ? '' : 'none';
+
+  // Reseta endereços pra recarregar
   _enderecoCardCarregado = false;
-  carregarEnderecosCard();
+
+  // Inicia na aba "Hoje"
+  trocarAbaAdm('dia');
 }
 
-// Cards sempre abertos — sem toggle
+// ── Navegação por abas no ADM ──
+let abaAdmAtiva = 'dia';
+
+function trocarAbaAdm(aba){
+  // Esconde todas as abas
+  ['dia','historico','enderecos','perfis'].forEach(a=>{
+    const el = document.getElementById(`aba_${a}`);
+    const btn = document.getElementById(`tab_${a}`);
+    if(el) el.style.display = 'none';
+    if(btn) btn.classList.remove('active');
+  });
+
+  // Mostra a aba selecionada
+  const abaEl = document.getElementById(`aba_${aba}`);
+  const tabEl = document.getElementById(`tab_${aba}`);
+  if(abaEl) abaEl.style.display = 'block';
+  if(tabEl) tabEl.classList.add('active');
+  abaAdmAtiva = aba;
+
+  // Carrega dados da aba se necessário
+  if(aba === 'enderecos' && !_enderecoCardCarregado) carregarEnderecosCard();
+  if(aba === 'historico') renderHistoricoCard();
+  if(aba === 'dia') renderDiaCard();
+  if(aba === 'perfis') renderPerfiis();
+}
 
 function renderPerfiis(){
   const lista = document.getElementById('listaPerfiis');

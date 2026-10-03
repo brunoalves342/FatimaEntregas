@@ -156,9 +156,49 @@
   .hint-arrow{font-size:16px;color:rgba(96,165,250,0.3);}
 
   /* ADM */
-  .adm-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:14px 16px;}
+  .adm-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:14px 16px;display:flex;flex-direction:column;gap:10px;}
   .adm-scroll::-webkit-scrollbar{display:none;}
   .adm-section-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;}
+
+  /* CARDS ADM */
+  .adm-card{background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    border:1px solid var(--glass-border);border-radius:var(--radius);
+    overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.25);}
+  .adm-card-header{display:flex;align-items:center;justify-content:space-between;
+    padding:16px;cursor:pointer;transition:background 0.15s;}
+  .adm-card-header:active{background:var(--glass-hover);}
+  .adm-card-title{display:flex;align-items:center;gap:12px;}
+  .adm-card-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;
+    justify-content:center;font-size:18px;flex-shrink:0;}
+  .adm-card-name{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-0.3px;}
+  .adm-card-sub{font-size:11px;font-weight:500;color:var(--text2);margin-top:2px;}
+  .adm-chevron{font-size:20px;color:var(--text2);transition:transform 0.2s;font-weight:300;}
+  .adm-chevron.open{transform:rotate(90deg);}
+  .adm-card-body{padding:0 16px 16px;border-top:1px solid var(--glass-border);}
+
+  /* PERFIL ITEM */
+  .perfil-item{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);
+    border-radius:12px;padding:14px;margin-bottom:8px;}
+  .perfil-item:last-child{margin-bottom:0;}
+  .perfil-nome{font-size:14px;font-weight:800;color:var(--text);margin-bottom:10px;
+    display:flex;align-items:center;gap:8px;}
+  .perfil-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;}
+  .perfil-badge.adm{background:rgba(251,191,36,0.15);color:var(--yellow);}
+  .perfil-badge.entregador{background:rgba(52,211,153,0.15);color:var(--green);}
+  .perfil-badge.supervisor{background:rgba(96,165,250,0.15);color:var(--accent);}
+  .perfil-row{display:flex;gap:8px;align-items:center;margin-bottom:6px;}
+  .perfil-label{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;
+    letter-spacing:0.5px;width:52px;flex-shrink:0;}
+  .perfil-val{font-size:13px;font-weight:600;color:var(--text);flex:1;}
+  .perfil-edit-input{flex:1;background:rgba(0,0,0,0.3);border:1.5px solid rgba(96,165,250,0.4);
+    border-radius:8px;padding:7px 10px;color:var(--text);font-size:13px;font-weight:600;
+    font-family:'Inter',sans-serif;outline:none;-webkit-appearance:none;}
+  .btn-perfil-salvar{background:linear-gradient(135deg,#3b6ef0,#818cf8);color:#fff;border:none;
+    border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;
+    font-family:'Inter',sans-serif;cursor:pointer;white-space:nowrap;}
+  .btn-perfil-editar{background:rgba(96,165,250,0.12);color:var(--accent);
+    border:1px solid rgba(96,165,250,0.2);border-radius:8px;padding:5px 10px;
+    font-size:11px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;margin-left:auto;}
   .adm-online-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
   .adm-ent-card{background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
     border:1px solid var(--glass-border);border-radius:var(--radius-sm);padding:13px;
@@ -422,12 +462,90 @@
       </div>
       <div class="header-right">
         <button class="btn-adm" onclick="renderAdm()" title="Atualizar">🔄</button>
-        <button class="btn-adm" onclick="abrirEnderecos()">📍 Endereços</button>
         <button class="btn-sair" onclick="sair()">Sair</button>
       </div>
     </div>
   </div>
-  <div class="adm-scroll" id="admScroll"></div>
+
+  <!-- CARDS DO PAINEL ADM -->
+  <div class="adm-scroll" id="admScroll">
+
+    <!-- CARD 1: GESTÃO DE PERFIS -->
+    <div class="adm-card" id="cardPerfis">
+      <div class="adm-card-header" onclick="toggleCard('perfisBody','chevronPerfis')">
+        <div class="adm-card-title">
+          <div class="adm-card-icon" style="background:rgba(251,191,36,0.15);">👥</div>
+          <div>
+            <div class="adm-card-name">Gestão de Perfis</div>
+            <div class="adm-card-sub">Editar login e senha</div>
+          </div>
+        </div>
+        <div class="adm-chevron" id="chevronPerfis">›</div>
+      </div>
+      <div class="adm-card-body" id="perfisBody" style="display:none;">
+        <div id="listaPerfiis"></div>
+      </div>
+    </div>
+
+    <!-- CARD 2: ENDEREÇOS CADASTRADOS -->
+    <div class="adm-card" id="cardEnderecos">
+      <div class="adm-card-header" onclick="toggleCard('enderecosBody','chevronEnderecos');carregarEnderecosCard()">
+        <div class="adm-card-title">
+          <div class="adm-card-icon" style="background:rgba(96,165,250,0.15);">📍</div>
+          <div>
+            <div class="adm-card-name">Endereços Cadastrados</div>
+            <div class="adm-card-sub">Todos os endereços até hoje</div>
+          </div>
+        </div>
+        <div class="adm-chevron" id="chevronEnderecos">›</div>
+      </div>
+      <div class="adm-card-body" id="enderecosBody" style="display:none;">
+        <input type="text" id="inputBuscaEndCard" placeholder="Buscar endereço..."
+          oninput="filtrarEnderecosCard(this.value)"
+          style="width:100%;background:rgba(0,0,0,0.25);border:1.5px solid rgba(255,255,255,0.1);
+          border-radius:10px;padding:10px 13px;color:#f0f4ff;font-size:13px;font-weight:500;
+          font-family:'Inter',sans-serif;outline:none;margin-bottom:10px;-webkit-appearance:none;" />
+        <div id="endListCard" style="max-height:240px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
+          <div class="hist-empty"><div class="ei">🔄</div><p>Toque para carregar</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD 3: HISTÓRICO DE ENTREGAS -->
+    <div class="adm-card" id="cardHistorico">
+      <div class="adm-card-header" onclick="toggleCard('historicoBody','chevronHistorico')">
+        <div class="adm-card-title">
+          <div class="adm-card-icon" style="background:rgba(52,211,153,0.15);">📋</div>
+          <div>
+            <div class="adm-card-name">Histórico de Entregas</div>
+            <div class="adm-card-sub">Dias anteriores do mês</div>
+          </div>
+        </div>
+        <div class="adm-chevron" id="chevronHistorico">›</div>
+      </div>
+      <div class="adm-card-body" id="historicoBody" style="display:none;">
+        <div id="historicoAdmList"></div>
+      </div>
+    </div>
+
+    <!-- CARD 4: ENTREGADORES DO DIA -->
+    <div class="adm-card" id="cardDia">
+      <div class="adm-card-header" onclick="toggleCard('diaBody','chevronDia')">
+        <div class="adm-card-title">
+          <div class="adm-card-icon" style="background:rgba(129,140,248,0.15);">🛵</div>
+          <div>
+            <div class="adm-card-name">Entregadores de Hoje</div>
+            <div class="adm-card-sub" id="admDiaSub">Carregando...</div>
+          </div>
+        </div>
+        <div class="adm-chevron" id="chevronDia">›</div>
+      </div>
+      <div class="adm-card-body" id="diaBody" style="display:none;">
+        <div id="diaAdmList"></div>
+      </div>
+    </div>
+
+  </div>
 </div>
 
 <!-- MODAL ENDEREÇOS -->
@@ -1289,115 +1407,202 @@ async function calcularDistancia(e){
 // ══════════════════════════════════════════
 //  PAINEL ADM
 // ══════════════════════════════════════════
-function renderAdm(){
-  const d    = new Date();
-  const tipo = USUARIOS[usuarioAtual].tipo;
 
-  // Ajusta header conforme perfil
+
+function renderAdm(){
+  const tipo = USUARIOS[usuarioAtual].tipo;
   document.getElementById('admNomeHeader').textContent = tipo === 'supervisor' ? `👀 ${usuarioAtual}` : 'Painel ADM';
   document.getElementById('admDataHeader').textContent = fmtData(hoje());
+  const cardPerfis = document.getElementById('cardPerfis');
+  if(cardPerfis) cardPerfis.style.display = tipo === 'adm' ? '' : 'none';
+  renderPerfiis();
+  renderDiaCard();
+  renderHistoricoCard();
+}
 
+function toggleCard(bodyId, chevronId){
+  const body    = document.getElementById(bodyId);
+  const chevron = document.getElementById(chevronId);
+  const aberto  = body.style.display !== 'none';
+  body.style.display = aberto ? 'none' : 'block';
+  chevron.classList.toggle('open', !aberto);
+}
 
-  const scroll = document.getElementById('admScroll');
-  const hora = d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')+':'+d.getSeconds().toString().padStart(2,'0');
-  const entregadores = Object.keys(USUARIOS).filter(u=>USUARIOS[u].tipo==='entregador');
+function renderPerfiis(){
+  const lista = document.getElementById('listaPerfiis');
+  if(!lista) return;
+  const users = Object.entries(USUARIOS);
+  lista.innerHTML = users.map(([user, info])=>`
+    <div class="perfil-item">
+      <div class="perfil-nome">
+        ${info.emoji} ${user}
+        <span class="perfil-badge ${info.tipo}">${info.tipo.toUpperCase()}</span>
+        <button class="btn-perfil-editar" onclick="editarPerfil('${user}')">✏️ Editar</button>
+      </div>
+      <div class="perfil-row">
+        <span class="perfil-label">Login</span>
+        <span class="perfil-val">${user}</span>
+      </div>
+      <div class="perfil-row">
+        <span class="perfil-label">Senha</span>
+        <span class="perfil-val">
+          <span id="senha_oculta_${user}">••••••</span>
+          <button onclick="toggleSenhaPerfil('${user}')"
+            style="background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--text2);">👁️</button>
+        </span>
+      </div>
+      <div id="form_${user}" style="display:none;margin-top:10px;border-top:1px solid rgba(255,255,255,0.07);padding-top:10px;">
+        <div class="perfil-row" style="margin-bottom:8px;">
+          <span class="perfil-label">Nova senha</span>
+          <input class="perfil-edit-input" type="text" id="input_senha_${user}" value="${info.senha}" />
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button onclick="cancelarEditPerfil('${user}')"
+            style="background:rgba(255,255,255,0.06);color:var(--text2);border:1px solid rgba(255,255,255,0.1);
+            border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;">
+            Cancelar
+          </button>
+          <button class="btn-perfil-salvar" onclick="salvarPerfil('${user}')">✓ Salvar</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+  users.forEach(([user,info])=>{ window[`_senhaReal_${user}`]=info.senha; window[`_senhaVisivel_${user}`]=false; });
+}
 
-  let pendentes = entregadores.length;
-  let dadosEnt  = {};
+function toggleSenhaPerfil(user){
+  const el=document.getElementById(`senha_oculta_${user}`);
+  window[`_senhaVisivel_${user}`]=!window[`_senhaVisivel_${user}`];
+  el.textContent=window[`_senhaVisivel_${user}`]?window[`_senhaReal_${user}`]:'••••••';
+}
+function editarPerfil(user){ document.getElementById(`form_${user}`).style.display='block'; }
+function cancelarEditPerfil(user){ document.getElementById(`form_${user}`).style.display='none'; }
+function salvarPerfil(user){
+  const novaSenha=document.getElementById(`input_senha_${user}`).value.trim();
+  if(!novaSenha){ toast('⚠️ Digite uma senha!'); return; }
+  USUARIOS[user].senha=novaSenha;
+  window[`_senhaReal_${user}`]=novaSenha;
+  const el=document.getElementById(`senha_oculta_${user}`);
+  el.textContent=window[`_senhaVisivel_${user}`]?novaSenha:'••••••';
+  cancelarEditPerfil(user);
+  toast(`✓ Senha de ${user} atualizada!`);
+}
 
+function renderDiaCard(){
+  const entregadores=Object.keys(USUARIOS).filter(u=>USUARIOS[u].tipo==='entregador');
+  let pendentes=entregadores.length; let dadosEnt={};
   entregadores.forEach(user=>{
-    // Busca pelos aliases do usuário
-    const aliases = USUARIOS[user].alias || [user];
-    const primary = aliases[0];
+    const primary=(USUARIOS[user].alias||[user])[0];
     db.ref(`entregas/${primary}/${hoje()}`).once('value', snap=>{
-      const data = snap.val()||{};
-      dadosEnt[user] = Object.values(data).sort((a,b)=>a.ts-b.ts);
+      dadosEnt[user]=Object.values(snap.val()||{}).sort((a,b)=>a.ts-b.ts);
       pendentes--;
-      if(pendentes===0) renderAdmComDados(dadosEnt, entregadores, scroll, hora);
+      if(pendentes===0) renderDiaBody(dadosEnt,entregadores);
     });
   });
 }
 
-function renderAdmComDados(dadosEnt, entregadores, scroll, hora){
-  const hoje_ = hoje();
-  let html = `<div style="text-align:right;font-size:11px;font-weight:600;color:rgba(148,163,184,0.4);margin-bottom:12px;">🔄 ${hora}</div>`;
-  html += `<div class="adm-section-title">Hoje — ${fmtData(hoje_)}</div>`;
-  html += `<div class="adm-online-grid">`;
-
-  let totalHoje = 0;
+function renderDiaBody(dadosEnt,entregadores){
+  let totalGeral=0, html='';
   entregadores.forEach(user=>{
-    const lista = dadosEnt[user]||[];
-    const soma  = lista.reduce((s,e)=>s+e.taxa,0);
-    totalHoje  += soma;
-    html += `<div class="adm-ent-card" onclick="verEntregadorHoje('${user}')">
-      <div class="online-dot"></div>
-      <div class="adm-ent-avatar">${USUARIOS[user].emoji}</div>
-      <div class="adm-ent-card-name">${user}</div>
-      <div class="adm-ent-card-qtd">${lista.length} entrega${lista.length!==1?'s':''}</div>
-      <div class="adm-ent-card-taxa">${fmt(soma)}</div>
+    const lista=dadosEnt[user]||[]; const soma=lista.reduce((s,e)=>s+e.taxa,0); totalGeral+=soma;
+    html+=`<div style="background:rgba(255,255,255,0.03);border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer;"
+      onclick="verEntregadorHoje('${user}')">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div style="font-size:14px;font-weight:800;color:var(--text);">${USUARIOS[user].emoji} ${user}</div>
+        <div style="font-size:15px;font-weight:900;color:var(--green);">${fmt(soma)}</div>
+      </div>
+      <div style="font-size:11px;font-weight:600;color:var(--text2);">${lista.length} entrega${lista.length!==1?'s':''} · Ver detalhes ›</div>
     </div>`;
   });
-
-  html += `</div>`;
-  html += `<div style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.18);
-    border-radius:14px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-    <span style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;">Total do Dia</span>
-    <span style="font-size:22px;font-weight:900;color:var(--green);letter-spacing:-0.6px;">${fmt(totalHoje)}</span>
+  html+=`<div style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.18);
+    border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+    <span style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;">Total do Dia</span>
+    <span style="font-size:20px;font-weight:900;color:var(--green);">${fmt(totalGeral)}</span>
   </div>`;
+  const d=new Date();
+  document.getElementById('admDiaSub').textContent=`${fmtData(hoje())} · ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+  document.getElementById('diaAdmList').innerHTML=html;
+}
 
-  // Histórico de dias anteriores — busca por aliases também
+function renderHistoricoCard(){
   db.ref('entregas').once('value', snap=>{
-    const allData = snap.val()||{};
-    const dias = new Set();
-
-    // Coleta todos os dias de todos os aliases
-    entregadores.forEach(user=>{
-      const aliases = USUARIOS[user].alias || [user];
-      aliases.forEach(alias=>{
-        if(allData[alias]){
-          Object.keys(allData[alias]).forEach(d=>dias.add(d));
+    const allData=snap.val()||{};
+    const entregadores=Object.keys(USUARIOS).filter(u=>USUARIOS[u].tipo==='entregador');
+    const dias=new Set();
+    entregadores.forEach(user=>{ (USUARIOS[user].alias||[user]).forEach(alias=>{ if(allData[alias]) Object.keys(allData[alias]).forEach(d=>dias.add(d)); }); });
+    const diasAnt=[...dias].sort().reverse().filter(d=>d!==hoje()&&dentrodoMes(d));
+    if(!diasAnt.length){
+      document.getElementById('historicoAdmList').innerHTML=`<div class="hist-empty"><div class="ei">📅</div><p>Nenhum dia anterior neste mês.</p></div>`;
+      return;
+    }
+    let html='';
+    diasAnt.forEach(dia=>{
+      let totalDia=0,totalEnt=0,resumo='';
+      entregadores.forEach(user=>{
+        const aliases=USUARIOS[user].alias||[user]; let lista=[];
+        aliases.forEach(alias=>{ if(allData[alias]&&allData[alias][dia]) lista=lista.concat(Object.values(allData[alias][dia])); });
+        const soma=lista.reduce((s,e)=>s+e.taxa,0);
+        if(lista.length>0){ totalDia+=soma; totalEnt+=lista.length;
+          resumo+=`<div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid rgba(255,255,255,0.05);">
+            <span style="font-size:12px;font-weight:600;color:var(--text2);">${user} · ${lista.length} entregas</span>
+            <span style="font-size:12px;font-weight:700;color:var(--accent);">${fmt(soma)}</span></div>`;
         }
+      });
+      if(totalEnt>0) html+=`<div style="background:rgba(255,255,255,0.03);border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer;"
+          onclick="verRelDia('${dia}')">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <span style="font-size:13px;font-weight:800;color:var(--text);">${fmtData(dia)}</span>
+            <span style="font-size:14px;font-weight:900;color:var(--green);">${fmt(totalDia)}</span>
+          </div>${resumo}
+          <div style="font-size:11px;font-weight:600;color:var(--text2);margin-top:6px;">Ver detalhes ›</div>
+        </div>`;
+    });
+    document.getElementById('historicoAdmList').innerHTML=html||`<div class="hist-empty"><div class="ei">📅</div><p>Sem entregas anteriores.</p></div>`;
+  });
+}
+
+let _enderecoCardCarregado=false;
+function carregarEnderecosCard(){
+  if(_enderecoCardCarregado) return;
+  const el=document.getElementById('endListCard');
+  el.innerHTML=`<div class="hist-empty"><div class="ei">🔄</div><p>Carregando...</p></div>`;
+  db.ref('entregas').once('value', snap=>{
+    const allUsers=snap.val()||{}; const mapa={};
+    Object.values(allUsers).forEach(userDias=>{
+      if(!userDias||typeof userDias!=='object') return;
+      Object.values(userDias).forEach(dia=>{
+        if(!dia||typeof dia!=='object') return;
+        Object.values(dia).forEach(e=>{
+          if(!e||!e.rua) return;
+          const chave=semAcento(e.rua.trim())+'|'+(e.numero||'').trim();
+          const ruaFull=e.rua.trim().match(/^(rua|av|avenida|alameda|travessa|praça)/i)?e.rua.trim():'Rua '+normalizarRua(e.rua);
+          if(!mapa[chave]){ mapa[chave]={rua:ruaFull,numero:(e.numero||'S/N').trim(),taxa:e.taxa||0,count:1}; }
+          else{ mapa[chave].count++; if(e.taxa) mapa[chave].taxa=e.taxa; }
+        });
       });
     });
-
-    const diasAnt = [...dias].sort().reverse().filter(d=>d!==hoje_ && dentrodoMes(d));
-
-    if(diasAnt.length>0){
-      html += `<div class="adm-section-title">Dias Anteriores</div>`;
-      diasAnt.forEach(dia=>{
-        let totalDia=0, totalEnt=0, resumo='';
-        entregadores.forEach(user=>{
-          const aliases = USUARIOS[user].alias || [user];
-          // Junta entregas de todos os aliases desse usuário
-          let lista = [];
-          aliases.forEach(alias=>{
-            if(allData[alias]&&allData[alias][dia]){
-              lista = lista.concat(Object.values(allData[alias][dia]));
-            }
-          });
-          const soma=lista.reduce((s,e)=>s+e.taxa,0);
-          if(lista.length>0){
-            totalDia+=soma; totalEnt+=lista.length;
-            resumo+=`<div class="adm-entregador-row">
-              <div><div class="adm-ent-name">${user}</div>
-              <div class="adm-ent-info">${lista.length} entrega${lista.length!==1?'s':''}</div></div>
-              <div class="adm-ent-taxa">${fmt(soma)}</div>
-            </div>`;
-          }
-        });
-        if(totalEnt>0){
-          html+=`<div class="adm-day-card" onclick="verRelDia('${dia}')">
-            <div class="adm-day-header">
-              <div class="adm-day-date">${fmtData(dia)}</div>
-              <div class="adm-day-total">${fmt(totalDia)}</div>
-            </div>${resumo}
-          </div>`;
-        }
-      });
-    }
-
-    scroll.innerHTML = html;
+    _todosEnderecos=Object.values(mapa).sort((a,b)=>a.rua.localeCompare(b.rua)||(parseInt(a.numero)||0)-(parseInt(b.numero)||0));
+    _enderecoCardCarregado=true;
+    renderEndListCard(_todosEnderecos,'');
   });
+}
+
+function filtrarEnderecosCard(texto){ renderEndListCard(_todosEnderecos,texto); }
+
+function renderEndListCard(todos,filtro){
+  const q=semAcento((filtro||'').trim());
+  const filtrados=q?todos.filter(e=>semAcento(e.rua).includes(q)||(e.numero+'').includes(q)):todos;
+  const el=document.getElementById('endListCard');
+  if(!filtrados.length){ el.innerHTML=`<div class="hist-empty"><div class="ei">📍</div><p>Nenhum encontrado.</p></div>`; return; }
+  el.innerHTML=filtrados.map(e=>`
+    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);
+      border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;">
+      <div style="font-size:16px;">📍</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;color:#f0f4ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.rua}, nº ${e.numero}</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:1px;">${e.count}x · última taxa: ${fmt(e.taxa)}</div>
+      </div>
+    </div>`).join('');
 }
 
 // ── Ver entregador hoje ──

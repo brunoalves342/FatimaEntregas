@@ -466,54 +466,48 @@
       </div>
     </div>
   </div>
-
-  <!-- CARDS DO PAINEL ADM -->
   <div class="adm-scroll" id="admScroll">
 
     <!-- CARD 1: GESTÃO DE PERFIS -->
     <div class="adm-card" id="cardPerfis">
-      <div class="adm-card-header" onclick="toggleCard('perfisBody','chevronPerfis')">
+      <div class="adm-card-header">
         <div class="adm-card-title">
           <div class="adm-card-icon" style="background:rgba(251,191,36,0.15);">👥</div>
           <div>
             <div class="adm-card-name">Gestão de Perfis</div>
-            <div class="adm-card-sub">Editar login e senha</div>
+            <div class="adm-card-sub">Editar senhas dos perfis</div>
           </div>
         </div>
-        <div class="adm-chevron" id="chevronPerfis">›</div>
       </div>
-      <div class="adm-card-body" id="perfisBody" style="display:none;">
+      <div class="adm-card-body">
         <div id="listaPerfiis"></div>
       </div>
     </div>
 
     <!-- CARD 2: ENDEREÇOS CADASTRADOS -->
-    <div class="adm-card" id="cardEnderecos">
-      <div class="adm-card-header" onclick="toggleCard('enderecosBody','chevronEnderecos');carregarEnderecosCard()">
+    <div class="adm-card">
+      <div class="adm-card-header">
         <div class="adm-card-title">
           <div class="adm-card-icon" style="background:rgba(96,165,250,0.15);">📍</div>
           <div>
             <div class="adm-card-name">Endereços Cadastrados</div>
-            <div class="adm-card-sub">Todos os endereços até hoje</div>
+            <div class="adm-card-sub" id="endSubtitle">Carregando...</div>
           </div>
         </div>
-        <div class="adm-chevron" id="chevronEnderecos">›</div>
       </div>
-      <div class="adm-card-body" id="enderecosBody" style="display:none;">
+      <div class="adm-card-body">
         <input type="text" id="inputBuscaEndCard" placeholder="Buscar endereço..."
           oninput="filtrarEnderecosCard(this.value)"
           style="width:100%;background:rgba(0,0,0,0.25);border:1.5px solid rgba(255,255,255,0.1);
           border-radius:10px;padding:10px 13px;color:#f0f4ff;font-size:13px;font-weight:500;
           font-family:'Inter',sans-serif;outline:none;margin-bottom:10px;-webkit-appearance:none;" />
-        <div id="endListCard" style="max-height:240px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
-          <div class="hist-empty"><div class="ei">🔄</div><p>Toque para carregar</p></div>
-        </div>
+        <div id="endListCard" style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;"></div>
       </div>
     </div>
 
     <!-- CARD 3: HISTÓRICO DE ENTREGAS -->
-    <div class="adm-card" id="cardHistorico">
-      <div class="adm-card-header" onclick="toggleCard('historicoBody','chevronHistorico')">
+    <div class="adm-card">
+      <div class="adm-card-header">
         <div class="adm-card-title">
           <div class="adm-card-icon" style="background:rgba(52,211,153,0.15);">📋</div>
           <div>
@@ -521,16 +515,15 @@
             <div class="adm-card-sub">Dias anteriores do mês</div>
           </div>
         </div>
-        <div class="adm-chevron" id="chevronHistorico">›</div>
       </div>
-      <div class="adm-card-body" id="historicoBody" style="display:none;">
+      <div class="adm-card-body">
         <div id="historicoAdmList"></div>
       </div>
     </div>
 
     <!-- CARD 4: ENTREGADORES DO DIA -->
-    <div class="adm-card" id="cardDia">
-      <div class="adm-card-header" onclick="toggleCard('diaBody','chevronDia')">
+    <div class="adm-card">
+      <div class="adm-card-header">
         <div class="adm-card-title">
           <div class="adm-card-icon" style="background:rgba(129,140,248,0.15);">🛵</div>
           <div>
@@ -538,9 +531,8 @@
             <div class="adm-card-sub" id="admDiaSub">Carregando...</div>
           </div>
         </div>
-        <div class="adm-chevron" id="chevronDia">›</div>
       </div>
-      <div class="adm-card-body" id="diaBody" style="display:none;">
+      <div class="adm-card-body">
         <div id="diaAdmList"></div>
       </div>
     </div>
@@ -1418,15 +1410,12 @@ function renderAdm(){
   renderPerfiis();
   renderDiaCard();
   renderHistoricoCard();
+  // Carrega endereços automaticamente
+  _enderecoCardCarregado = false;
+  carregarEnderecosCard();
 }
 
-function toggleCard(bodyId, chevronId){
-  const body    = document.getElementById(bodyId);
-  const chevron = document.getElementById(chevronId);
-  const aberto  = body.style.display !== 'none';
-  body.style.display = aberto ? 'none' : 'block';
-  chevron.classList.toggle('open', !aberto);
-}
+// Cards sempre abertos — sem toggle
 
 function renderPerfiis(){
   const lista = document.getElementById('listaPerfiis');
@@ -1589,20 +1578,120 @@ function carregarEnderecosCard(){
 
 function filtrarEnderecosCard(texto){ renderEndListCard(_todosEnderecos,texto); }
 
-function renderEndListCard(todos,filtro){
-  const q=semAcento((filtro||'').trim());
-  const filtrados=q?todos.filter(e=>semAcento(e.rua).includes(q)||(e.numero+'').includes(q)):todos;
-  const el=document.getElementById('endListCard');
+function renderEndListCard(todos, filtro){
+  const q = semAcento((filtro||'').trim());
+  const filtrados = q ? todos.filter(e=>semAcento(e.rua).includes(q)||(e.numero+'').includes(q)) : todos;
+  const el = document.getElementById('endListCard');
+  const sub = document.getElementById('endSubtitle');
+  if(sub) sub.textContent = filtrados.length + ' endereço' + (filtrados.length!==1?'s':'') + ' cadastrados';
   if(!filtrados.length){ el.innerHTML=`<div class="hist-empty"><div class="ei">📍</div><p>Nenhum encontrado.</p></div>`; return; }
-  el.innerHTML=filtrados.map(e=>`
+  el.innerHTML = filtrados.map((e,i)=>`
     <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);
-      border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;">
-      <div style="font-size:16px;">📍</div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:700;color:#f0f4ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.rua}, nº ${e.numero}</div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:1px;">${e.count}x · última taxa: ${fmt(e.taxa)}</div>
+      border-radius:10px;padding:10px 12px;" id="end_item_${i}">
+      <!-- Visualização -->
+      <div id="end_view_${i}" style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:16px;flex-shrink:0;">📍</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:700;color:#f0f4ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.rua}, nº ${e.numero}</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:1px;">${e.count}x · última taxa: ${fmt(e.taxa)}</div>
+        </div>
+        <button onclick="editarEnderecoCard(${i})"
+          style="background:rgba(96,165,250,0.12);color:var(--accent);border:1px solid rgba(96,165,250,0.2);
+          border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;
+          font-family:'Inter',sans-serif;cursor:pointer;flex-shrink:0;">✏️</button>
+      </div>
+      <!-- Edição (oculto) -->
+      <div id="end_edit_${i}" style="display:none;margin-top:8px;border-top:1px solid rgba(255,255,255,0.07);padding-top:8px;">
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;">
+          <div style="display:flex;gap:6px;align-items:center;">
+            <span style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;width:46px;flex-shrink:0;">Rua</span>
+            <input type="text" id="end_rua_${i}" value="${e.rua}"
+              style="flex:1;background:rgba(0,0,0,0.3);border:1.5px solid rgba(96,165,250,0.4);border-radius:8px;
+              padding:7px 10px;color:#f0f4ff;font-size:13px;font-weight:600;font-family:'Inter',sans-serif;
+              outline:none;-webkit-appearance:none;" />
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <span style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;width:46px;flex-shrink:0;">Número</span>
+            <input type="text" id="end_num_${i}" value="${e.numero}"
+              style="width:80px;background:rgba(0,0,0,0.3);border:1.5px solid rgba(96,165,250,0.4);border-radius:8px;
+              padding:7px 10px;color:#f0f4ff;font-size:13px;font-weight:600;font-family:'Inter',sans-serif;
+              outline:none;-webkit-appearance:none;" />
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <span style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;width:46px;flex-shrink:0;">Taxa</span>
+            <input type="number" id="end_taxa_${i}" value="${e.taxa}" step="0.50"
+              style="width:100px;background:rgba(0,0,0,0.3);border:1.5px solid rgba(96,165,250,0.4);border-radius:8px;
+              padding:7px 10px;color:#f0f4ff;font-size:13px;font-weight:600;font-family:'Inter',sans-serif;
+              outline:none;-webkit-appearance:none;" />
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;justify-content:flex-end;">
+          <button onclick="cancelarEditEnd(${i})"
+            style="background:rgba(255,255,255,0.06);color:var(--text2);border:1px solid rgba(255,255,255,0.1);
+            border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;">
+            Cancelar
+          </button>
+          <button onclick="salvarEnderecoCard(${i},'${e.rua.replace(/'/g,"\\'")}','${e.numero}')"
+            style="background:linear-gradient(135deg,#3b6ef0,#818cf8);color:#fff;border:none;
+            border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;font-family:'Inter',sans-serif;cursor:pointer;">
+            ✓ Salvar
+          </button>
+        </div>
       </div>
     </div>`).join('');
+}
+
+function editarEnderecoCard(i){
+  document.getElementById(`end_view_${i}`).style.display = 'none';
+  document.getElementById(`end_edit_${i}`).style.display = 'block';
+  document.getElementById(`end_rua_${i}`).focus();
+}
+
+function cancelarEditEnd(i){
+  document.getElementById(`end_view_${i}`).style.display = 'flex';
+  document.getElementById(`end_edit_${i}`).style.display = 'none';
+}
+
+async function salvarEnderecoCard(i, ruaAntiga, numeroAntigo){
+  const novaRua   = document.getElementById(`end_rua_${i}`).value.trim();
+  const novoNum   = document.getElementById(`end_num_${i}`).value.trim();
+  const novaTaxa  = parseFloat(document.getElementById(`end_taxa_${i}`).value);
+
+  if(!novaRua){ toast('⚠️ Digite o nome da rua!'); return; }
+  if(isNaN(novaTaxa)||novaTaxa<0){ toast('⚠️ Taxa inválida!'); return; }
+
+  toast('⏳ Atualizando...');
+
+  // Busca todas as entregas com esse endereço e atualiza no Firebase
+  const snap = await db.ref('entregas').once('value');
+  const allData = snap.val()||{};
+  const updates = {};
+
+  Object.entries(allData).forEach(([user, dias])=>{
+    Object.entries(dias).forEach(([dia, entregas])=>{
+      Object.entries(entregas).forEach(([id, e])=>{
+        if(!e||!e.rua) return;
+        const mesmaRua = semAcento(e.rua.trim()) === semAcento(ruaAntiga.trim());
+        const mesmoNum = (e.numero||'').trim() === numeroAntigo.trim();
+        if(mesmaRua && mesmoNum){
+          updates[`entregas/${user}/${dia}/${id}/rua`]    = novaRua;
+          updates[`entregas/${user}/${dia}/${id}/numero`] = novoNum||e.numero;
+          updates[`entregas/${user}/${dia}/${id}/taxa`]   = novaTaxa;
+        }
+      });
+    });
+  });
+
+  if(Object.keys(updates).length > 0){
+    await db.ref().update(updates);
+    toast(`✓ ${Object.keys(updates).length} entrega(s) atualizada(s)!`);
+  } else {
+    toast('Nenhuma entrega encontrada com esse endereço');
+  }
+
+  // Recarrega a lista
+  _enderecoCardCarregado = false;
+  carregarEnderecosCard();
 }
 
 // ── Ver entregador hoje ──

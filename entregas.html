@@ -423,7 +423,6 @@
       <div class="header-right">
         <button class="btn-adm" onclick="renderAdm()" title="Atualizar">🔄</button>
         <button class="btn-adm" onclick="abrirEnderecos()">📍 Endereços</button>
-        <button class="btn-adm" id="btnVoltarAdm" onclick="voltarApp()">← Voltar</button>
         <button class="btn-sair" onclick="sair()">Sair</button>
       </div>
     </div>
@@ -581,7 +580,7 @@ const USUARIOS = {
   'Bruno':    { senha:'Macaco22',  tipo:'entregador',  emoji:'🛵', alias:['Bruno'] },
   'Jonathas': { senha:'ent2',      tipo:'entregador',  emoji:'🛵', alias:['Jonathas','Entregador2'] },
   'Andre':    { senha:'adm2006',   tipo:'supervisor',  emoji:'👀' },
-  'Entregador3': { senha:'ent3',   tipo:'entregador',  emoji:'🛵', alias:['Entregador3'] },
+
 };
 
 // ══════════════════════════════════════════
@@ -1297,7 +1296,7 @@ function renderAdm(){
   // Ajusta header conforme perfil
   document.getElementById('admNomeHeader').textContent = tipo === 'supervisor' ? `👀 ${usuarioAtual}` : 'Painel ADM';
   document.getElementById('admDataHeader').textContent = fmtData(hoje());
-  document.getElementById('btnVoltarAdm').style.display = tipo === 'supervisor' ? 'none' : '';
+
 
   const scroll = document.getElementById('admScroll');
   const hora = d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')+':'+d.getSeconds().toString().padStart(2,'0');
@@ -1485,8 +1484,41 @@ function fecharRelDia(ev){
 // ══════════════════════════════════════════
 function abrirEnderecos(){
   document.getElementById('inputBuscaEnd').value = '';
-  renderEnderecos('');
+  document.getElementById('endCount').textContent = 'Carregando...';
+  document.getElementById('endList').innerHTML = `<div class="hist-empty"><div class="ei">🔄</div><p>Buscando endereços...</p></div>`;
   document.getElementById('modalEnderecos').classList.add('show');
+
+  // Busca direto do Firebase pra garantir que tem tudo
+  db.ref('entregas').once('value', snap=>{
+    const allUsers = snap.val()||{};
+    const mapa = {};
+
+    Object.values(allUsers).forEach(userDias=>{
+      if(!userDias||typeof userDias!=='object') return;
+      Object.values(userDias).forEach(dia=>{
+        if(!dia||typeof dia!=='object') return;
+        Object.values(dia).forEach(e=>{
+          if(!e||!e.rua) return;
+          const chave = semAcento(e.rua.trim()) + '|' + (e.numero||'').trim();
+          const ruaFull = e.rua.trim().match(/^(rua|av|avenida|alameda|travessa|praça)/i)
+            ? e.rua.trim()
+            : 'Rua ' + normalizarRua(e.rua);
+          if(!mapa[chave]){
+            mapa[chave] = { rua: ruaFull, numero: (e.numero||'S/N').trim(), taxa: e.taxa||0, count: 1 };
+          } else {
+            mapa[chave].count++;
+            if(e.taxa) mapa[chave].taxa = e.taxa;
+            if(ruaFull.length > mapa[chave].rua.length) mapa[chave].rua = ruaFull;
+          }
+        });
+      });
+    });
+
+    // Atualiza o histórico global também
+    enderecoHistorico = { ...enderecoHistorico, ...mapa };
+
+    renderEnderecosComDados(Object.values(mapa), '');
+  });
 }
 
 function fecharEnderecos(ev){
@@ -1494,18 +1526,23 @@ function fecharEnderecos(ev){
     document.getElementById('modalEnderecos').classList.remove('show');
 }
 
+let _todosEnderecos = [];
+
 function filtrarEnderecos(texto){
-  renderEnderecos(texto);
+  renderEnderecosComDados(_todosEnderecos, texto);
 }
 
-function renderEnderecos(filtro){
-  const todos = Object.values(enderecoHistorico)
-    .sort((a,b)=> a.rua.localeCompare(b.rua) || (parseInt(a.numero)||0)-(parseInt(b.numero)||0));
+function renderEnderecosComDados(todos, filtro){
+  _todosEnderecos = todos;
 
-  const q = semAcento(filtro.trim());
+  const ordenados = [...todos].sort((a,b)=>
+    a.rua.localeCompare(b.rua) || (parseInt(a.numero)||0)-(parseInt(b.numero)||0)
+  );
+
+  const q = semAcento((filtro||'').trim());
   const filtrados = q.length > 0
-    ? todos.filter(e => semAcento(e.rua).includes(q) || (e.numero+'').includes(q))
-    : todos;
+    ? ordenados.filter(e => semAcento(e.rua).includes(q) || (e.numero+'').toLowerCase().includes(q))
+    : ordenados;
 
   document.getElementById('endCount').textContent = filtrados.length + (filtrados.length===1?' endereço':' endereços');
 
